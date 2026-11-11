@@ -1,46 +1,73 @@
-# GEDS · Sistema Web de Gestión y Control de Inventario
+# GEDS — Sistema de Gestión y Control de Inventario
 
-Sitio web construido con páginas HTML independientes, CSS, Bootstrap 5 y JavaScript vanilla. Cada pantalla es un documento normal y la navegación utiliza enlaces `href`; JavaScript se encarga de la autenticación, formularios y datos.
+Aplicación web para la administración de inventario de un almacén. GEDS reúne en una sola interfaz la consulta de existencias, el registro de operaciones y la gestión de la información asociada a productos, clientes y proveedores.
 
-## Inicio
+## Funcionalidades
 
-El servidor local incluye los archivos estáticos y la API de desarrollo:
+- Inicio de sesión y control de acceso a las pantallas internas.
+- Panel de resumen con indicadores del inventario.
+- Consulta, búsqueda, alta y edición de productos.
+- Registro e historial de entradas y salidas.
+- Administración de categorías, unidades, clientes y proveedores.
+- Reportes filtrables y exportación de movimientos a CSV.
+- Interfaz adaptable, tema claro y oscuro, y navegación entre páginas.
+
+## Tecnologías
+
+- HTML5 con páginas independientes y navegación mediante enlaces.
+- CSS3 y Bootstrap 5.3.3.
+- JavaScript vanilla con módulos ES.
+- Node.js para el servidor local de archivos y la API de desarrollo.
+- Almacenamiento local del navegador para el modo de demostración.
+
+## Requisitos
+
+- Node.js 18 o posterior.
+
+## Ejecución
 
 ```bash
 npm start
 ```
 
-Abre [http://localhost:3000](http://localhost:3000). También puedes servir la carpeta con Live Server o `python -m http.server`; para las funciones de API en desarrollo, usa el servidor Node incluido.
+La aplicación queda disponible en `http://localhost:3000`. Las páginas estáticas también pueden servirse con un servidor de desarrollo local. El servidor Node incluido proporciona la API de desarrollo.
 
-Las páginas internas verifican la sesión desde el `<head>` antes de mostrar su contenido. Si abres directamente un dashboard con Live Server sin iniciar sesión, te redirige a `login.html`.
+## Modo de demostración
 
-La aplicación usa datos de demostración y almacenamiento local del navegador por defecto (`USE_MOCK: true`). Para las funciones de API en desarrollo, utiliza el servidor Node incluido.
+La configuración predeterminada activa `USE_MOCK` en `js/config.js`. En este modo, la aplicación utiliza datos de ejemplo y los guarda en el almacenamiento local del navegador. Las credenciales de demostración son:
 
-## Acceso de demostración
+| Usuario | Contraseña |
+| --- | --- |
+| `admin` | `admin` |
 
-- Usuario: `admin`
-- Contraseña: `admin`
+El almacenamiento local es propio de cada navegador y no sincroniza información entre usuarios o dispositivos.
 
-## Páginas
-
-- `index.html`: entrada del sitio; redirige al inicio de sesión.
-- `login.html`: acceso.
-- `dashboard.html`: resumen de inventario.
-- `productos.html`: búsqueda y administración del catálogo.
-- `producto-form.html`: alta y edición de productos (`?id=...`).
-- `movimientos.html`: registro e historial de entradas y salidas.
-- `reportes.html`: filtros y exportación CSV.
-- `catalogos.html`: administración de proveedores, clientes, categorías y unidades.
-
-## Estructura
+## Estructura del proyecto
 
 ```text
-├── *.html                 # Documentos HTML completos por pantalla
-├── css/                   # Estilos y tema
-├── js/pages/              # Controladores vanilla por página
-├── js/components/         # Notificaciones, diálogos e iconos
-├── js/services/           # Acceso a datos y servicios
-├── js/data/               # Datos de demostración y almacenamiento local
-├── assets/                # Recursos estáticos
-└── server/server.js       # Servidor estático y API local
+├── assets/             Recursos estáticos, como el logotipo
+├── css/                Estilos globales, componentes y vistas
+├── js/
+│   ├── components/     Componentes de interfaz reutilizables
+│   ├── data/           Datos iniciales y adaptador de almacenamiento local
+│   ├── pages/          Lógica de cada pantalla
+│   ├── services/       Servicios de autenticación e inventario
+│   └── utils/          Formateo, exportación y utilidades DOM
+├── server/             Servidor local y API de desarrollo
+├── index.html          Página de entrada y redirección al inicio de sesión
+├── login.html          Inicio de sesión
+├── dashboard.html      Resumen del inventario
+├── productos.html      Catálogo de productos
+├── producto-form.html  Alta y edición de productos
+├── movimientos.html    Registro e historial de movimientos
+├── reportes.html       Reportes de inventario
+└── catalogos.html      Catálogos auxiliares
 ```
+
+## Configuración de API
+
+La configuración de la aplicación se encuentra en `js/config.js`. Para utilizar la API de desarrollo en lugar del modo de demostración, se puede desactivar `USE_MOCK` y configurar `API_BASE_URL` con la dirección correspondiente. La especificación de endpoints está documentada en [API_SPECIFICATION.md](API_SPECIFICATION.md).
+
+## Créditos
+
+Desarrollado para el Instituto Tecnológico de Aguascalientes.
