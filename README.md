@@ -14,34 +14,7 @@ Abre [http://localhost:3000](http://localhost:3000). También puedes servir la c
 
 Las páginas internas verifican la sesión desde el `<head>` antes de mostrar su contenido. Si abres directamente un dashboard con Live Server sin iniciar sesión, te redirige a `login.html`.
 
-## Publicar en GitHub Pages
-
-La aplicación funciona como sitio estático en modo demostración (`USE_MOCK: true`). No requiere instalar dependencias ni ejecutar un proceso de compilación. Los datos de demostración y la sesión se guardan en el navegador, por lo que no se comparten entre dispositivos.
-
-1. Crea un repositorio vacío en GitHub. No agregues README, licencia ni `.gitignore` desde GitHub, porque estos archivos ya existen aquí.
-2. En una terminal, desde la carpeta del proyecto, ejecuta:
-
-   ```bash
-   git init -b main
-   git add .
-   git commit -m "Preparar sitio GEDS"
-   git remote add origin https://github.com/TU-USUARIO/TU-REPOSITORIO.git
-   git push -u origin main
-   ```
-
-   Sustituye `TU-USUARIO` y `TU-REPOSITORIO` por los valores de tu cuenta y del repositorio.
-3. En GitHub abre **Settings → Pages**. En **Build and deployment**, selecciona **Deploy from a branch**, elige `main` y la carpeta `/(root)`, y guarda.
-4. Cuando termine la publicación, GitHub mostrará la dirección del sitio en esa misma sección. El archivo `index.html` abre el inicio de sesión.
-
-Para actualizar el sitio después de cambiar archivos:
-
-```bash
-git add .
-git commit -m "Describe el cambio"
-git push
-```
-
-GitHub Pages solo sirve los archivos estáticos. Si se desactiva el modo de demostración para usar una API real, publica también el servidor Node en un servicio compatible con Node.js y configura `API_BASE_URL` para apuntar a esa API. El servidor incluido está pensado para desarrollo local.
+La aplicación usa datos de demostración y almacenamiento local del navegador por defecto (`USE_MOCK: true`). Para las funciones de API en desarrollo, utiliza el servidor Node incluido.
 
 ## Acceso de demostración
 
