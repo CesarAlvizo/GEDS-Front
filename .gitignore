@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+
+# Configuración local y secretos
+.env.*
+!.env.example
+
+# Archivos de base de datos local y temporales
+server/*.db
+server/*.db-journal
+*.log
+
+# Entorno y variables
+.env
+.env.local
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+.history/
+

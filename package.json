@@ -1,0 +1,22 @@
+{
+  "name": "geds-front",
+  "version": "1.0.0",
+  "description": "Sistema web de inventario con HTML, CSS, JavaScript vanilla y Bootstrap",
+  "main": "server/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "keywords": [
+    "geds",
+    "inventario",
+    "frontend",
+    "vanilla-js",
+    "bootstrap",
+    "html5",
+    "css3"
+  ],
+  "author": "GEDS Team",
+  "license": "ISC"
+}
+
