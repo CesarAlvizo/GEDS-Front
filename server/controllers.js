@@ -131,7 +131,8 @@ export const CatalogController = {
 
   async addItem(req, res, catalogParam, body, sendJson) {
     const catalogName = Validators.validateCatalogName(catalogParam);
-    const updatedCatalog = CatalogModel.addItem(catalogName, body);
+    const validatedItem = Validators.validateCatalogItem(catalogName, body);
+    const updatedCatalog = CatalogModel.addItem(catalogName, validatedItem);
     return sendJson(res, 201, updatedCatalog);
   },
 

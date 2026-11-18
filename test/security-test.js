@@ -32,8 +32,18 @@ const maliciousLogins = [
 ];
 
 for (const payload of maliciousLogins) {
+  // Ahora el validador del backend debe rechazar antes el intento si no es alfanumérico seguro
+  let rejected = false;
+  try {
+    Validators.validateLogin({ username: payload, password: 'password' });
+  } catch (e) {
+    rejected = e instanceof ValidationError;
+  }
+  assert(`Validación estricta alfanumérica rechaza usuario sospechoso: "${payload}"`, rejected);
+
+  // Y a nivel de modelo de BD sigue dando null
   const result = UserModel.findByCredentials(payload, payload);
-  assert(`Inyección detenida en login con payload: "${payload}"`, result === null);
+  assert(`Consulta en BD neutraliza inyección: "${payload}"`, result === null);
 }
 
 // Comprobar que credencial legítima sigue funcionando
@@ -49,8 +59,17 @@ const maliciousProductCodes = [
 ];
 
 for (const payload of maliciousProductCodes) {
+  // Validación estricta en backend debe rechazarlo
+  let rejected = false;
+  try {
+    Validators.assertSafeText(payload, 'código', true);
+  } catch (e) {
+    rejected = e instanceof ValidationError;
+  }
+  assert(`Backend rechaza código de producto no alfanumérico: "${payload}"`, rejected);
+
   const prod = ProductModel.getByCodigo(payload);
-  assert(`Búsqueda por código inmune a: "${payload}"`, prod === null);
+  assert(`Búsqueda en BD por código inmune a: "${payload}"`, prod === null);
 }
 
 // Búsqueda por ID con SQL Injection
@@ -71,7 +90,7 @@ for (const badId of maliciousIds) {
   assert(`Validación de ID rechaza payload no numérico: "${badId}"`, threw);
 }
 
-// 3. PRUEBAS EN CATÁLOGOS (Whitelisting de tablas)
+// 3. PRUEBAS EN CATÁLOGOS (Whitelisting de tablas y datos)
 console.log('\n--- 3. Pruebas en Catálogos (Protección de nombres de tabla) ---');
 const maliciousCatalogs = [
   "usuarios",
@@ -96,34 +115,48 @@ const validCat = CatalogModel.getAll('categories');
 assert('Catálogo legítimo "categories" devuelve resultados esperados', Array.isArray(validCat) && validCat.length > 0);
 
 // 4. PRUEBA DE INYECCIÓN EN CREACIÓN DE PRODUCTOS
-console.log('\n--- 4. Pruebas de Inserción de Productos con Comillas y Metacaracteres ---');
-const uniqueCode = "SEC-" + Date.now() + "-' OR '1'='1";
+console.log('\n--- 4. Pruebas de Validación Alfanumérica en Creación de Productos ---');
 const maliciousProductData = {
-  codigo: uniqueCode,
-  nombre: "Producto Test'); DROP TABLE productos; --",
-  desc: "Descripción con 'comillas' y \"dobles\" y -- comentarios",
+  codigo: "SEC-TEST'; DROP TABLE productos; --",
+  nombre: "Producto Malicioso",
+  costo: 50,
+  precio: 80,
+  min: 5
+};
+
+let productValidationRejected = false;
+try {
+  Validators.validateProduct(maliciousProductData);
+} catch (e) {
+  productValidationRejected = e instanceof ValidationError;
+}
+assert('El backend rechaza el producto por contener caracteres sospechosos de SQLi en código', productValidationRejected);
+
+// Producto legítimo con caracteres válidos
+const validProductData = {
+  codigo: "PROD-" + Date.now(),
+  nombre: "Paquete de Hojas Carta",
+  desc: "Papelería escolar y de oficina",
   categoria: "Papelería",
-  unidad: "Pieza",
+  unidad: "Paquete",
   costo: 50,
   precio: 80,
   stock: 10,
   min: 5
 };
+const newProduct = ProductModel.create(validProductData);
+assert('Producto legítimo se crea correctamente', newProduct && newProduct.id > 0);
 
-const newProduct = ProductModel.create(maliciousProductData);
-assert('Producto con metacaracteres SQL se insertó como texto literal seguro (sin ejecutar SQL)', newProduct && newProduct.id > 0);
-
-// Comprobar que la tabla productos NO fue borrada por la inyección
+// Comprobar que la tabla productos permanece íntegra
 const allProds = ProductModel.getAll();
-assert('La tabla productos permanece íntegra (DROP TABLE fue neutralizado)', allProds.length >= 8);
+assert('La tabla productos permanece íntegra', allProds.length >= 8);
 
-// 5. PRUEBA EN MOVIMIENTOS
+// 5. PRUEBAS EN FILTROS Y REGISTRO DE MOVIMIENTOS
 console.log('\n--- 5. Pruebas en Filtros y Registro de Movimientos ---');
 const maliciousMovements = MovementModel.getAll({
   fromDate: "2026-01-01' OR '1'='1",
   tipo: "E' OR '1'='1"
 });
-// Al usar consultas preparadas WHERE fecha >= ? AND tipo = ?, no debe retornar todos los registros por bypass lógico
 assert('Filtros de movimientos con inyección SQL tratados como parámetros literales seguros', Array.isArray(maliciousMovements));
 
 // 6. RESULTADOS FINALES
@@ -136,4 +169,3 @@ if (passedTests === totalTests) {
   process.exit(1);
 }
 console.log('====================================================\n');
-

@@ -80,9 +80,9 @@
         </nav>
         <section class="card" id="catalog-panel">
           <form id="catalog-form" class="toolbar">
-            <input class="in form-control" id="catalog-name" placeholder="Nombre" required>
-            <input class="in form-control" id="catalog-phone" placeholder="Teléfono">
-            <input class="in form-control" id="catalog-email" placeholder="Correo">
+            <input class="in form-control" id="catalog-name" type="text" placeholder="Nombre" maxlength="150" pattern="[^&quot;'`;\\]{2,150}" title="Nombre válido sin comillas ni caracteres de inyección" required>
+            <input class="in form-control" id="catalog-phone" type="tel" placeholder="Teléfono" maxlength="50" pattern="[0-9+\s\-()]{4,50}" title="Formato telefónico válido">
+            <input class="in form-control" id="catalog-email" type="email" placeholder="Correo" maxlength="100">
             <button type="submit" class="btn primary">Agregar</button>
           </form>
           <div class="tw">
