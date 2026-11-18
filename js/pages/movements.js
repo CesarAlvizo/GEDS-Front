@@ -2,6 +2,7 @@ import { productService } from '../services/productService.js';
 import { movementService } from '../services/movementService.js';
 import { storageAdapter } from '../data/localStorageAdapter.js';
 import { notify, addOption, makeCell, showEmptyState } from './common.js';
+import { InputSecurity } from '../utils/validators.js';
 
 const form = document.querySelector('#movement-form');
 const typeButtons = [...document.querySelectorAll('#movement-type button')];
@@ -25,16 +26,71 @@ async function renderHistory() {
   const movements = await movementService.getRecentMovements(10); historyHost.replaceChildren();
   if (!movements.length) { showEmptyState(historyHost, 'Aún no hay movimientos', 'Cuando registres una entrada o salida, aparecerá aquí.', '↔'); return; }
   const table = document.createElement('table'); const head = table.createTHead().insertRow(); ['Fecha','Producto','Tipo','Cantidad','Motivo'].forEach(text => { const th = document.createElement('th'); th.textContent = text; head.append(th); });
-  const body = table.createTBody(); movements.forEach(movement => { const product = storageAdapter.getProductById(movement.pid); const row = body.insertRow(); makeCell(row, movement.fecha); makeCell(row, product?.nombre || 'Producto eliminado'); makeCell(row, movement.tipo === 'E' ? 'Entrada' : 'Salida', `movement-type ${movement.tipo === 'E' ? 'movement-type-entry' : 'movement-type-exit'}`); makeCell(row, `${movement.cant} ${product?.unidad || ''}`); makeCell(row, movement.motivo); }); historyHost.append(table);
+  const body = table.createTBody();
+  const allProducts = await productService.getProducts();
+  const productMap = new Map(allProducts.map(p => [Number(p.id), p]));
+  movements.forEach(movement => {
+    const product = productMap.get(Number(movement.pid)) || storageAdapter.getProductById(movement.pid);
+    const row = body.insertRow();
+    makeCell(row, movement.fecha);
+    makeCell(row, product?.nombre || 'Producto eliminado');
+    makeCell(row, movement.tipo === 'E' ? 'Entrada' : 'Salida', `movement-type ${movement.tipo === 'E' ? 'movement-type-entry' : 'movement-type-exit'}`);
+    makeCell(row, `${movement.cant} ${product?.unidad || ''}`);
+    makeCell(row, movement.motivo);
+  });
+  historyHost.append(table);
 }
 typeButtons.forEach(button => button.addEventListener('click', () => { movementType = button.dataset.type; typeButtons.forEach(item => item.classList.toggle('on', item === button)); updateReasons(); error.textContent = ''; }));
 productSelect.addEventListener('change', updateHint); updateReasons(); await updateHint(); await renderHistory();
 form.addEventListener('submit', async event => {
   event.preventDefault(); error.textContent = ''; quantity.classList.remove('err');
-  const product = await productService.getProductById(productSelect.value); const amount = Number(quantity.value);
+  
+  const selectedPid = productSelect.value;
+  if (!selectedPid) {
+    error.textContent = 'Selecciona un producto válido.';
+    return;
+  }
+
+  const product = await productService.getProductById(selectedPid);
   if (!product) { error.textContent = 'Selecciona un producto válido.'; return; }
-  if (!(amount > 0)) { quantity.classList.add('err'); error.textContent = 'La cantidad debe ser mayor que cero.'; return; }
-  if (movementType === 'S' && amount > product.stock) { quantity.classList.add('err'); error.textContent = `Cantidad insuficiente: solo hay ${product.stock} ${product.unidad.toLowerCase()}.`; return; }
-  try { await movementService.createMovement({ pid: product.id, tipo: movementType, cant: amount, fecha: date.value || localDate, motivo: reason.value, obs: notes.value.trim() }); quantity.value = ''; notes.value = ''; await updateHint(); await renderHistory(); notify(movementType === 'E' ? 'Entrada registrada' : 'Salida registrada'); }
-  catch (failure) { quantity.classList.add('err'); error.textContent = failure.message || 'Error al registrar el movimiento.'; }
+
+  const qtyValidation = InputSecurity.validateField(quantity, { required: true, type: 'number', min: 0.01 });
+  if (!qtyValidation.valid) {
+    quantity.classList.add('err');
+    error.textContent = qtyValidation.message;
+    return;
+  }
+  const amount = Number(qtyValidation.value);
+
+  if (movementType === 'S' && amount > product.stock) {
+    quantity.classList.add('err');
+    error.textContent = `Cantidad insuficiente: solo hay ${product.stock} ${product.unidad.toLowerCase()}.`;
+    return;
+  }
+
+  const cleanNotes = InputSecurity.sanitize(notes.value);
+  if (cleanNotes.length > 300) {
+    notes.classList.add('err');
+    error.textContent = 'Las observaciones no pueden superar 300 caracteres.';
+    return;
+  }
+
+  try {
+    await movementService.createMovement({
+      pid: Number(product.id),
+      tipo: movementType,
+      cant: amount,
+      fecha: date.value || localDate,
+      motivo: InputSecurity.sanitize(reason.value),
+      obs: cleanNotes
+    });
+    quantity.value = '';
+    notes.value = '';
+    await updateHint();
+    await renderHistory();
+    notify(movementType === 'E' ? 'Entrada registrada' : 'Salida registrada');
+  } catch (failure) {
+    quantity.classList.add('err');
+    error.textContent = failure.message || 'Error al registrar el movimiento.';
+  }
 });
