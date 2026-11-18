@@ -386,6 +386,160 @@
   line-height: 1.5;
 }
 
+.user-card-footer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.user-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.user-logout-btn:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.user-logout-btn:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+/* Sidebar User Profile Section */
+.side-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: all .25s var(--ease);
+}
+
+.side-user-avatar {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .5px;
+}
+
+.side-user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.side-user-name {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.side-user-role {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+.side-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all .2s var(--ease);
+}
+
+.side-logout-btn span.side-logout-icon {
+  font-size: 15px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  transition: transform .2s ease;
+}
+
+.side-logout-btn:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  transform: translateX(2px);
+}
+
+.side-logout-btn:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+/* Collapsed sidebar adaptations */
+.side.collapsed .side-footer {
+  padding-top: 10px;
+}
+
+.side.collapsed .side-user {
+  padding: 6px;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+}
+
+.side.collapsed .side-user-info,
+.side.collapsed .side-logout-btn span.nav-text {
+  opacity: 0;
+  pointer-events: none;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.side.collapsed .side-logout-btn {
+  justify-content: center;
+  padding: 10px;
+}
+
 .avatar {
   width: 28px;
   height: 28px;

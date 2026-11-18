@@ -41,9 +41,20 @@
         <a href="movimientos.html"><span aria-hidden="true">⇄</span><span class="nav-text">Movimientos</span></a>
         <a href="reportes.html"><span aria-hidden="true">▤</span><span class="nav-text">Reportes</span></a>
         <a href="catalogos.html"><span aria-hidden="true">▣</span><span class="nav-text">Catálogos</span></a>
-        <button type="button" data-logout><span aria-hidden="true">↪</span><span class="nav-text">Cerrar
-            sesión</span></button>
       </nav>
+      <div class="side-footer">
+        <div class="side-user" title="Administrador · Cuenta activa">
+          <span class="side-user-avatar">AD</span>
+          <div class="side-user-info">
+            <span class="side-user-name">Administrador</span>
+            <span class="side-user-role">Cuenta activa</span>
+          </div>
+        </div>
+        <button type="button" class="side-logout-btn" data-logout aria-label="Cerrar sesión">
+          <span class="side-logout-icon" aria-hidden="true">↪</span>
+          <span class="nav-text">Cerrar sesión</span>
+        </button>
+      </div>
     </aside>
     <div class="scrim" id="scrim">
     </div>
@@ -56,20 +67,6 @@
         <span class="sp">
         </span>
         <button class="btn icon ghost" data-theme-toggle aria-label="Cambiar tema">◐</button>
-        <details class="user-menu">
-          <summary class="user" aria-label="Mostrar información del administrador">
-            <span class="avatar">AD</span>
-            <span class="nm">Administrador</span>
-            <span class="user-caret" aria-hidden="true"></span>
-          </summary>
-          <section class="user-card" aria-label="Información del usuario">
-            <div class="user-card-heading"><span
-                class="user-card-avatar">AD</span><span><strong>Administrador</strong><small>Cuenta
-                  activa</small></span></div>
-            <div class="user-role"><span aria-hidden="true">✓</span><span>Permisos de administrador</span></div>
-            <p>Acceso para gestionar el panel, productos, movimientos, reportes y catálogos.</p>
-          </section>
-        </details>
       </header>
       <main class="view enter dashboard-view">
         <h1>Panel principal</h1>

@@ -97,8 +97,9 @@ assert('Catálogo legítimo "categories" devuelve resultados esperados', Array.i
 
 // 4. PRUEBA DE INYECCIÓN EN CREACIÓN DE PRODUCTOS
 console.log('\n--- 4. Pruebas de Inserción de Productos con Comillas y Metacaracteres ---');
+const uniqueCode = "SEC-" + Date.now() + "-' OR '1'='1";
 const maliciousProductData = {
-  codigo: "SEC-' OR '1'='1",
+  codigo: uniqueCode,
   nombre: "Producto Test'); DROP TABLE productos; --",
   desc: "Descripción con 'comillas' y \"dobles\" y -- comentarios",
   categoria: "Papelería",
