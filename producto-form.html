@@ -76,19 +76,19 @@
           <div class="form-grid">
             <div class="field">
               <label for="f_codigo">Código *</label>
-              <input class="in form-control" id="f_codigo" name="codigo" required>
+              <input class="in form-control" id="f_codigo" name="codigo" type="text" maxlength="50" pattern="[A-Za-z0-9\-_]{2,50}" title="Código alfanumérico (letras, números y guiones, sin caracteres especiales ni comillas)" required>
               <span class="err-t">
               </span>
             </div>
             <div class="field">
               <label for="f_nombre">Nombre *</label>
-              <input class="in form-control" id="f_nombre" name="nombre" required>
+              <input class="in form-control" id="f_nombre" name="nombre" type="text" maxlength="150" pattern="[^&quot;'`;\\]{2,150}" title="Nombre del producto (sin comillas ni caracteres de inyección)" required>
               <span class="err-t">
               </span>
             </div>
             <div class="field span2">
               <label for="f_desc">Descripción</label>
-              <textarea class="in form-control" id="f_desc" name="desc" rows="2">
+              <textarea class="in form-control" id="f_desc" name="desc" rows="2" maxlength="500">
 </textarea>
             </div>
             <div class="field">
@@ -103,19 +103,19 @@
             </div>
             <div class="field">
               <label for="f_costo">Costo ($)</label>
-              <input class="in form-control" id="f_costo" name="costo" type="number" min="0" step="0.01">
+              <input class="in form-control" id="f_costo" name="costo" type="number" min="0" max="999999999" step="0.01">
             </div>
             <div class="field">
               <label for="f_precio">Precio ($)</label>
-              <input class="in form-control" id="f_precio" name="precio" type="number" min="0" step="0.01">
+              <input class="in form-control" id="f_precio" name="precio" type="number" min="0" max="999999999" step="0.01">
             </div>
             <div class="field">
               <label for="f_stock">Stock actual</label>
-              <input class="in form-control" id="f_stock" name="stock" type="number" min="0">
+              <input class="in form-control" id="f_stock" name="stock" type="number" min="0" max="999999999" step="any">
             </div>
             <div class="field">
               <label for="f_min">Stock mínimo *</label>
-              <input class="in form-control" id="f_min" name="min" type="number" min="0" required>
+              <input class="in form-control" id="f_min" name="min" type="number" min="0" max="999999999" step="any" required>
               <span class="err-t">
               </span>
             </div>

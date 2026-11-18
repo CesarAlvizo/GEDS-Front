@@ -89,11 +89,11 @@
             <div class="form-grid mt-3">
               <div class="field">
                 <label for="movement-quantity">Cantidad *</label>
-                <input class="in form-control" id="movement-quantity" type="number" min="1" step="any">
+                <input class="in form-control" id="movement-quantity" type="number" min="0.01" max="999999999" step="any" required>
               </div>
               <div class="field">
-                <label for="movement-date">Fecha</label>
-                <input class="in form-control" id="movement-date" type="date">
+                <label for="movement-date">Fecha *</label>
+                <input class="in form-control" id="movement-date" type="date" required>
               </div>
             </div>
             <div class="field mt-3">
@@ -103,7 +103,7 @@
             </div>
             <div class="field mt-3">
               <label for="movement-notes">Observaciones</label>
-              <textarea class="in form-control" id="movement-notes" rows="2">
+              <textarea class="in form-control" id="movement-notes" rows="2" maxlength="300" placeholder="Notas adicionales (opcional)">
 </textarea>
             </div>
             <div class="err-t" id="movement-error">
