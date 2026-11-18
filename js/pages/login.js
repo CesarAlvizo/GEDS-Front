@@ -36,8 +36,7 @@ form.addEventListener('submit', async event => {
   }
 
   try {
-    const user = await authService.login(usernameVal.value, cleanPassword);
-    sessionStorage.setItem('geds_login_message', `Sesión iniciada correctamente como ${user.nombre || 'Administrador'}.`);
+    await authService.login(usernameVal.value, cleanPassword);
     location.assign('dashboard.html');
   } catch (err) {
     error.textContent = err.message || 'Usuario o contraseña incorrectos.';
