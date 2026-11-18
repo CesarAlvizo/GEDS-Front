@@ -1,6 +1,7 @@
 import { catalogService } from '../services/catalogService.js';
 import { confirmBox } from '../components/modal.js';
 import { notify, makeCell } from './common.js';
+import { InputSecurity } from '../utils/validators.js';
 
 const tabs = [...document.querySelectorAll('[data-catalog]')];
 const form = document.querySelector('#catalog-form');
@@ -18,15 +19,35 @@ async function render() {
   items.forEach((item, index) => {
     const row = body.insertRow();
     if (simple) makeCell(row, item);
-    else { makeCell(row, item.n); makeCell(row, item.t); makeCell(row, item.c, 'muted'); }
+    else { makeCell(row, item.n || item.nombre); makeCell(row, item.t || item.telefono || '—'); makeCell(row, item.c || item.correo || '—', 'muted'); }
     const actions = makeCell(row, ''); const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn sm danger'; remove.textContent = 'Eliminar';
     remove.addEventListener('click', () => confirmBox('Eliminar elemento','Esta acción quitará el registro del catálogo.','Eliminar',async () => { await catalogService.removeItem(catalog, index); notify('Elemento eliminado'); await render(); })); actions.append(remove);
   });
 }
 tabs.forEach(tab => tab.addEventListener('click', async () => { catalog = tab.dataset.catalog; tabs.forEach(item => item.classList.toggle('on', item === tab)); form.reset(); await render(); }));
 form.addEventListener('submit', async event => {
-  event.preventDefault(); const value = name.value.trim(); if (!value) { name.classList.add('err'); return; }
-  await catalogService.addItem(catalog, (catalog === 'categories' || catalog === 'units') ? value : { n: value, t: phone.value.trim() || '—', c: email.value.trim() || '—' });
-  form.reset(); name.classList.remove('err'); notify('Elemento agregado'); await render();
+  event.preventDefault();
+  const nameValidation = InputSecurity.validateField(name, { required: true, maxLength: 100 });
+  if (!nameValidation.valid) {
+    name.classList.add('err');
+    return;
+  }
+  name.classList.remove('err');
+  const value = nameValidation.value;
+  const isSimple = (catalog === 'categories' || catalog === 'units');
+
+  const cleanPhone = InputSecurity.sanitize(phone.value).slice(0, 50);
+  const cleanEmail = InputSecurity.sanitize(email.value).slice(0, 100);
+
+  const payload = isSimple ? value : { n: value, t: cleanPhone || '—', c: cleanEmail || '—' };
+
+  try {
+    await catalogService.addItem(catalog, payload);
+    form.reset();
+    notify('Elemento agregado');
+    await render();
+  } catch (err) {
+    notify(err.message || 'Error al agregar elemento', 'warn');
+  }
 });
 await render();
