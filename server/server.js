@@ -47,9 +47,34 @@ function sendJson(res, statusCode, data) {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   });
   res.end(JSON.stringify(data));
+}
+
+// Middleware de verificación de seguridad para endpoints privados
+function checkAuth(req, res, pathname) {
+  // Rutas públicas que no requieren token
+  const publicPaths = ['/api/auth/login', '/api/auth/logout'];
+  if (publicPaths.includes(pathname)) return true;
+
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    sendJson(res, 401, { message: 'Acceso no autorizado: Token Bearer faltante o inválido' });
+    return false;
+  }
+
+  const token = authHeader.slice(7).trim();
+  if (!token || token.length < 10) {
+    sendJson(res, 401, { message: 'Token de sesión inválido o expirado' });
+    return false;
+  }
+
+  return true;
 }
 
 function serveStatic(req, res, pathname) {
@@ -103,6 +128,11 @@ async function handleApi(req, res, parsedUrl) {
 
   if (pathname === '/api/auth/logout' && method === 'POST') {
     return await AuthController.logout(req, res, sendJson);
+  }
+
+  // Verificar autenticación mediante Token Bearer en todas las operaciones privadas
+  if (!checkAuth(req, res, pathname)) {
+    return;
   }
 
   // Rutas de Productos
