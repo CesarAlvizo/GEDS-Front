@@ -9,7 +9,7 @@ export const CONFIG = {
     date: '10/11/2026',
     legend: 'GEDS · Sistema Web de Gestión y Control de Inventario · Instituto Tecnológico de Aguascalientes'
   },
-  USE_MOCK: true,
+  USE_MOCK: false,
   API_BASE_URL: 'http://localhost:3000/api',
   ENDPOINTS: {
     AUTH: {
