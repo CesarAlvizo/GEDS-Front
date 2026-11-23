@@ -8,6 +8,9 @@ node_modules/
 # Archivos de base de datos local y temporales
 server/*.db
 server/*.db-journal
+server/*.sqlite
+server/*.sqlite-shm
+server/*.sqlite-wal
 *.log
 
 # Entorno y variables
