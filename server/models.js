@@ -253,3 +253,108 @@ export const CatalogModel = {
   }
 };
 
+/**
+ * Procedimientos Almacenados (Stored Procedures) y Operaciones Transaccionales
+ * Encapsulan lógica crítica en transacciones atómicas con validación y protección a nivel de BD.
+ */
+export const StoredProcedures = {
+  /**
+   * Procedimiento: sp_registrar_movimiento_inventario
+   * Ejecuta en una sola transacción atómica:
+   * 1. Verificación del producto
+   * 2. Comprobación de stock en caso de salida
+   * 3. Inserción de movimiento (activa el trigger trg_actualiza_stock_movimiento)
+   * 4. Retorno del estado final
+   */
+  sp_registrar_movimiento_inventario(movementData) {
+    const db = getDatabase();
+    
+    // Iniciar transacción atómica (BEGIN TRANSACTION / COMMIT / ROLLBACK)
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      const prodStmt = db.prepare('SELECT id, stock, unidad, activo FROM productos WHERE id = ?');
+      const prod = prodStmt.get(Number(movementData.pid));
+
+      if (!prod) {
+        throw new Error('Procedimiento Almacenado: Producto no encontrado');
+      }
+
+      if (!prod.activo) {
+        throw new Error('Procedimiento Almacenado: No se pueden registrar movimientos en un producto inactivo');
+      }
+
+      const cant = Number(movementData.cant);
+      if (cant <= 0) {
+        throw new Error('Procedimiento Almacenado: La cantidad debe ser estrictamente mayor a 0');
+      }
+
+      if (movementData.tipo === 'S' && prod.stock < cant) {
+        throw new Error(`Procedimiento Almacenado: Stock insuficiente. Disponible: ${prod.stock} ${prod.unidad}`);
+      }
+
+      // Inserción del movimiento. 
+      // El TRIGGER trg_actualiza_stock_movimiento actualizará automáticamente el stock en la tabla productos
+      const insertStmt = db.prepare(`
+        INSERT INTO movimientos (fecha, pid, tipo, cant, motivo, obs)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      const res = insertStmt.run(
+        String(movementData.fecha),
+        Number(movementData.pid),
+        String(movementData.tipo),
+        cant,
+        String(movementData.motivo || '').trim(),
+        String(movementData.obs || '').trim()
+      );
+
+      const newMov = db.prepare('SELECT * FROM movimientos WHERE id = ?').get(res.lastInsertRowid);
+      const updatedProd = db.prepare('SELECT * FROM productos WHERE id = ?').get(prod.id);
+
+      db.exec('COMMIT;');
+      return { movement: newMov, product: { ...updatedProd, activo: Boolean(updatedProd.activo) } };
+    } catch (error) {
+      db.exec('ROLLBACK;');
+      throw error;
+    }
+  },
+
+  /**
+   * Procedimiento: sp_crear_producto_seguro
+   * Inserta un producto con validación de código único y verificación de integridad
+   */
+  sp_crear_producto_seguro(productData) {
+    const db = getDatabase();
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      const checkCode = db.prepare('SELECT id FROM productos WHERE codigo = ?').get(String(productData.codigo).trim());
+      if (checkCode) {
+        throw new Error(`Procedimiento Almacenado: El código ${productData.codigo} ya existe en el sistema`);
+      }
+
+      const stmt = db.prepare(`
+        INSERT INTO productos (codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const res = stmt.run(
+        String(productData.codigo).trim(),
+        String(productData.nombre).trim(),
+        String(productData.desc || '').trim(),
+        String(productData.categoria).trim(),
+        String(productData.unidad).trim(),
+        Number(productData.costo) || 0,
+        Number(productData.precio) || 0,
+        Number(productData.stock) || 0,
+        Number(productData.min) || 0,
+        productData.activo === false ? 0 : 1
+      );
+
+      const created = db.prepare('SELECT * FROM productos WHERE id = ?').get(res.lastInsertRowid);
+      db.exec('COMMIT;');
+      return { ...created, activo: Boolean(created.activo) };
+    } catch (error) {
+      db.exec('ROLLBACK;');
+      throw error;
+    }
+  }
+};
+

@@ -1,5 +1,5 @@
 // server/controllers.js - Controladores que orquestan modelos y validaciones
-import { UserModel, ProductModel, MovementModel, CatalogModel } from './models.js';
+import { UserModel, ProductModel, MovementModel, CatalogModel, StoredProcedures } from './models.js';
 import { Validators, ValidationError } from './validators.js';
 
 export const AuthController = {
@@ -47,13 +47,7 @@ export const ProductController = {
 
   async create(req, res, body, sendJson) {
     const validated = Validators.validateProduct(body);
-
-    const existing = ProductModel.getByCodigo(validated.codigo);
-    if (existing) {
-      return sendJson(res, 400, { message: `El código ${validated.codigo} ya está registrado` });
-    }
-
-    const created = ProductModel.create(validated);
+    const created = StoredProcedures.sp_crear_producto_seguro(validated);
     return sendJson(res, 201, created);
   },
 
@@ -99,26 +93,8 @@ export const MovementController = {
 
   async create(req, res, body, sendJson) {
     const validated = Validators.validateMovement(body);
-    const prod = ProductModel.getById(validated.pid);
-    if (!prod) {
-      return sendJson(res, 400, { message: 'Producto no encontrado' });
-    }
-
-    if (validated.tipo === 'S' && validated.cant > prod.stock) {
-      return sendJson(res, 400, {
-        message: `Stock insuficiente. Disponible: ${prod.stock} ${prod.unidad.toLowerCase()}`
-      });
-    }
-
-    const newStock = validated.tipo === 'E'
-      ? prod.stock + validated.cant
-      : prod.stock - validated.cant;
-
-    ProductModel.updateStock(prod.id, newStock);
-    const movement = MovementModel.create(validated);
-    const updatedProd = ProductModel.getById(prod.id);
-
-    return sendJson(res, 201, { movement, product: updatedProd });
+    const result = StoredProcedures.sp_registrar_movimiento_inventario(validated);
+    return sendJson(res, 201, result);
   }
 };
 

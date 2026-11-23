@@ -86,6 +86,58 @@ function initSchema(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (pid) REFERENCES productos(id)
     );
+
+    -- =========================================================================
+    -- TRIGGERS DE SEGURIDAD E INTEGRIDAD DE DATOS (PROTECCIÓN A NIVEL DE BD)
+    -- =========================================================================
+
+    -- 1. Trigger de validación de precios y costos en productos (BEFORE INSERT / UPDATE)
+    CREATE TRIGGER IF NOT EXISTS trg_valida_producto_precio_insert
+    BEFORE INSERT ON productos
+    BEGIN
+      SELECT CASE
+        WHEN NEW.costo < 0 OR NEW.precio < 0 OR NEW.stock < 0 OR NEW.min < 0 THEN
+          RAISE(ABORT, 'Seguridad BD: Valores numéricos en productos no pueden ser negativos.')
+        WHEN LENGTH(TRIM(NEW.codigo)) < 2 THEN
+          RAISE(ABORT, 'Seguridad BD: El código del producto debe contener al menos 2 caracteres.')
+        WHEN LENGTH(TRIM(NEW.nombre)) < 2 THEN
+          RAISE(ABORT, 'Seguridad BD: El nombre del producto no puede estar vacío.')
+      END;
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS trg_valida_producto_precio_update
+    BEFORE UPDATE ON productos
+    BEGIN
+      SELECT CASE
+        WHEN NEW.costo < 0 OR NEW.precio < 0 OR NEW.stock < 0 OR NEW.min < 0 THEN
+          RAISE(ABORT, 'Seguridad BD: Valores numéricos en productos no pueden ser negativos.')
+      END;
+    END;
+
+    -- 2. Trigger de validación de cantidad positiva en movimientos (BEFORE INSERT)
+    CREATE TRIGGER IF NOT EXISTS trg_valida_movimiento_insert
+    BEFORE INSERT ON movimientos
+    BEGIN
+      SELECT CASE
+        WHEN NEW.cant <= 0 THEN
+          RAISE(ABORT, 'Seguridad BD: La cantidad del movimiento debe ser estrictamente mayor a 0.')
+        WHEN NEW.tipo = 'S' AND (SELECT stock FROM productos WHERE id = NEW.pid) < NEW.cant THEN
+          RAISE(ABORT, 'Seguridad BD: Violación de stock insuficiente para salida de inventario.')
+      END;
+    END;
+
+    -- 3. Trigger para actualización automática del stock de producto tras registrar movimiento (AFTER INSERT)
+    CREATE TRIGGER IF NOT EXISTS trg_actualiza_stock_movimiento
+    AFTER INSERT ON movimientos
+    BEGIN
+      UPDATE productos
+      SET stock = CASE
+        WHEN NEW.tipo = 'E' THEN stock + NEW.cant
+        WHEN NEW.tipo = 'S' THEN stock - NEW.cant
+      END,
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = NEW.pid;
+    END;
   `);
 }
 
