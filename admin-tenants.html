@@ -36,14 +36,15 @@
       </div>
       <nav class="nav" aria-label="Menú principal de plataforma">
         <a class="active" href="admin-tenants.html"><span aria-hidden="true">▣</span><span class="nav-text">Clientes y Cuentas</span></a>
-        <a href="dashboard.html"><span aria-hidden="true">▦</span><span class="nav-text">Vista Almacén</span></a>
       </nav>
       <div class="side-footer">
-        <div class="side-user" title="Administrador Principal">
-          <span class="side-user-avatar">AD</span>
+        <div class="side-user" title="Superadministrador de la plataforma">
+          <span class="side-user-avatar superadmin-avatar" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M12 2.5 20 5v6.1c0 5.1-3.4 8.5-8 10.4-4.6-1.9-8-5.3-8-10.4V5l8-2.5Zm0 2.1L6 6.5v4.6c0 3.9 2.4 6.7 6 8.4 3.6-1.7 6-4.5 6-8.4V6.5l-6-1.9Zm-1.1 9.9-2.2-2.2 1.4-1.4 1.1 1.1 3-3 1.4 1.4-4.4 4.1-.3.3Z"/></svg>
+          </span>
           <div class="side-user-info">
-            <span class="side-user-name">Administrador</span>
-            <span class="side-user-role">Control Maestro</span>
+            <span class="side-user-name">Superadministrador</span>
+            <span class="side-user-role">Control de plataforma</span>
           </div>
         </div>
         <button type="button" class="side-logout-btn" data-logout aria-label="Cerrar sesión">
@@ -62,15 +63,15 @@
         </button>
         <div class="d-flex align-items-center gap-2">
           <span class="chip ok" style="font-size: 0.75rem; letter-spacing: 0.03em;">
-            Consola de Administración
+            Consola de Superadministración
           </span>
         </div>
         <span class="sp"></span>
         <button class="btn icon ghost" data-theme-toggle aria-label="Cambiar tema">◐</button>
       </header>
       <main class="view enter">
-        <h1>Gestión de Clientes y Almacenes</h1>
-        <p class="sub">Administración de cuentas con inventarios aislados y accesos independientes</p>
+        <h1>Gestión de clientes</h1>
+        <p class="sub">Administra las cuentas de tus clientes y consulta el uso agregado de sus inventarios.</p>
 
         <!-- Tarjetas de métricas con el CSS nativo de GEDS (.grid .g4 .card .kpi) -->
         <section class="grid g4 mb-4" id="admin-kpis">
@@ -83,11 +84,11 @@
             <strong class="val" id="kpi-active-tenants">—</strong>
           </div>
           <div class="card kpi">
-            <span class="lbl">Productos en red</span>
+            <span class="lbl">Productos de clientes</span>
             <strong class="val" id="kpi-total-products">—</strong>
           </div>
           <div class="card kpi kpi-exit">
-            <span class="lbl">Movimientos totales</span>
+            <span class="lbl">Movimientos de clientes</span>
             <strong class="val" id="kpi-total-movements">—</strong>
           </div>
         </section>
@@ -101,6 +102,18 @@
                 <h2>Cuentas de clientes</h2>
                 <span class="sp"></span>
                 <span class="text-muted small" id="tenants-count-label">Cargando...</span>
+              </div>
+              <div class="row g-2 mb-3" aria-label="Filtros de cuentas">
+                <div class="col-12 col-md">
+                  <input class="in form-control" id="tenant-search" type="search" placeholder="Buscar por empresa o usuario" aria-label="Buscar clientes">
+                </div>
+                <div class="col-12 col-md-auto">
+                  <select class="in form-select" id="tenant-status-filter" aria-label="Filtrar por estado">
+                    <option value="all">Todos los estados</option>
+                    <option value="active">Activos</option>
+                    <option value="suspended">Suspendidos</option>
+                  </select>
+                </div>
               </div>
               <div class="tw">
                 <table class="table mb-0">

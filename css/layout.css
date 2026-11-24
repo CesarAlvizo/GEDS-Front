@@ -455,6 +455,19 @@
   letter-spacing: .5px;
 }
 
+.side-user-avatar.superadmin-avatar {
+  border-radius: 11px;
+  color: #fff;
+  background: linear-gradient(145deg, #7257d8, #403090);
+  box-shadow: 0 3px 10px rgb(64 48 144 / 24%);
+}
+
+.side-user-avatar.superadmin-avatar svg {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
+}
+
 .side-user-info {
   display: flex;
   flex-direction: column;

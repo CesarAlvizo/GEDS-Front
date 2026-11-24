@@ -10,6 +10,8 @@ const kpiActiveTenants = document.querySelector('#kpi-active-tenants');
 const kpiTotalProducts = document.querySelector('#kpi-total-products');
 const kpiTotalMovements = document.querySelector('#kpi-total-movements');
 const countLabel = document.querySelector('#tenants-count-label');
+const searchInput = document.querySelector('#tenant-search');
+const statusFilter = document.querySelector('#tenant-status-filter');
 
 const form = document.querySelector('#tenant-form');
 const nameInput = document.querySelector('#tenant-name');
@@ -33,23 +35,39 @@ async function loadData() {
     if (kpiTotalProducts) kpiTotalProducts.textContent = stats.totalProducts ?? '—';
     if (kpiTotalMovements) kpiTotalMovements.textContent = stats.totalMovements ?? '—';
 
-    renderTable(users);
+    allTenants = users.filter(u => u.id !== 1 && u.username !== 'admin');
+    filterTenants();
   } catch (err) {
     console.error('Error al cargar clientes:', err);
     notify('Error al obtener la lista de clientes', 'warn');
   }
 }
 
-function renderTable(users) {
-  const tenants = users.filter(u => u.id !== 1 && u.username !== 'admin');
-  if (countLabel) countLabel.textContent = `${tenants.length} cliente(s) registrado(s)`;
+let allTenants = [];
+
+function filterTenants() {
+  const query = (searchInput?.value || '').trim().toLocaleLowerCase();
+  const status = statusFilter?.value || 'all';
+  const tenants = allTenants.filter(user => {
+    const matchesQuery = `${user.nombre || ''} ${user.username || ''}`.toLocaleLowerCase().includes(query);
+    const isActive = user.activo === 1 || user.activo === true;
+    const matchesStatus = status === 'all' || (status === 'active' ? isActive : !isActive);
+    return matchesQuery && matchesStatus;
+  });
+  renderTable(tenants, allTenants.length);
+}
+
+function renderTable(tenants, total = tenants.length) {
+  if (countLabel) countLabel.textContent = tenants.length === total
+    ? `${total} cliente(s)`
+    : `${tenants.length} de ${total} cliente(s)`;
 
   tbody.innerHTML = '';
   if (tenants.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" class="text-center py-4 text-muted">
-          No hay clientes registrados aún. Usa el formulario para dar de alta al primer cliente.
+          ${total === 0 ? 'No hay clientes registrados aún. Usa el formulario para dar de alta al primer cliente.' : 'No hay clientes que coincidan con la búsqueda y el estado seleccionados.'}
         </td>
       </tr>
     `;
@@ -173,6 +191,9 @@ form?.addEventListener('submit', async event => {
     submitBtn.disabled = false;
   }
 });
+
+searchInput?.addEventListener('input', filterTenants);
+statusFilter?.addEventListener('change', filterTenants);
 
 loadData();
 
