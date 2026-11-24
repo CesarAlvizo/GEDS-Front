@@ -39,7 +39,12 @@ class CatalogService {
       };
       return { users, stats };
     } else {
-      return await apiClient.get('/usuarios');
+      const res = await apiClient.get('/usuarios');
+      // Aseguramos compatibilidad si devuelve array o si devuelve { users, stats }
+      if (Array.isArray(res)) {
+        return { users: res, stats: null };
+      }
+      return res;
     }
   }
 

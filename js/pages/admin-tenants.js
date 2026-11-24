@@ -1,7 +1,8 @@
 import { catalogService } from '../services/catalogService.js';
 import { authService } from '../services/authService.js';
 import { setTheme, getTheme } from '../components/shell.js';
-import { notify, confirmBox } from '../components/dialog.js';
+import { confirmBox } from '../components/modal.js';
+import { notify } from './common.js';
 import { InputSecurity } from '../utils/validators.js';
 
 setTheme(getTheme());
@@ -9,7 +10,7 @@ document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
   setTheme(getTheme() === 'dark' ? 'light' : 'dark');
 });
 
-const mbtn = document.querySelector('#mbtn');
+const notify = (msg, type = 'check') => toast(msg, type);
 const side = document.querySelector('#side');
 const scrim = document.querySelector('#scrim');
 if (mbtn && side && scrim) {
@@ -202,3 +203,4 @@ form?.addEventListener('submit', async event => {
 });
 
 loadData();
+

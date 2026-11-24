@@ -33,7 +33,13 @@ async function render() {
   labels.forEach(label => { const th = document.createElement('th'); th.textContent = label; headerRow.append(th); }); 
   head.append(headerRow);
 
-  const items = isUsers ? await catalogService.getUsers() : await catalogService.getCatalog(catalog);
+  let items = [];
+  if (isUsers) {
+    const res = await catalogService.getUsers();
+    items = Array.isArray(res) ? res : (res.users || []);
+  } else {
+    items = await catalogService.getCatalog(catalog);
+  }
   items.forEach((item, index) => {
     const row = body.insertRow();
     if (isUsers) {

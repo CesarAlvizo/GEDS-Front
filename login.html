@@ -332,23 +332,35 @@ c0 85 -56 176 -123 201 -41 16 -127 13 -162 -5z" />
                     <button type="submit" class="btn primary lgbtn w-100" id="login-submit"><span
                             class="lbl">Entrar</span><i class="spin" aria-hidden="true"></i></button>
 
-                    <!-- Acceso rápido / Credenciales de prueba discretas -->
-                    <div class="mt-4 pt-3 border-top" style="border-color: var(--b, #e2e8f0) !important;">
+                    <!-- Selector elegante de cuentas demo -->
+                    <div class="demo-accounts-panel mt-4 pt-3 border-top" style="border-color: var(--b, #e2e8f0) !important;">
                         <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted, #64748b);">
-                                Acceso rápido demo
+                            <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted, #64748b);">
+                                Cuentas de demostración
                             </span>
-                            <span class="badge text-bg-light border" style="font-size: 0.7rem; font-weight: 500;">Clic para llenar</span>
+                            <span style="font-size: 0.7rem; color: var(--muted, #94a3b8);">Autocompletar</span>
                         </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn sm ghost demo-quick-fill" data-u="admin" data-p="admin" style="font-size: 0.78rem; padding: 4px 10px; border-radius: 8px;">
-                                🛡️ Admin Maestro
+                        <div class="d-grid gap-1">
+                            <button type="button" class="btn text-start demo-quick-fill d-flex align-items-center justify-content-between py-2 px-3 border rounded-3 bg-body-tertiary" data-u="admin" data-p="admin" style="font-size: 0.8rem; transition: background-color 0.15s ease;">
+                                <div>
+                                    <div class="fw-semibold text-body">Administrador Principal</div>
+                                    <div class="text-muted" style="font-size: 0.72rem;">Consola de clientes y control central</div>
+                                </div>
+                                <code class="small text-muted bg-body px-2 py-0.5 rounded border">admin</code>
                             </button>
-                            <button type="button" class="btn sm ghost demo-quick-fill" data-u="farmacia_sj" data-p="cliente123" style="font-size: 0.78rem; padding: 4px 10px; border-radius: 8px;">
-                                💊 Farmacia San José
+                            <button type="button" class="btn text-start demo-quick-fill d-flex align-items-center justify-content-between py-2 px-3 border rounded-3 bg-body-tertiary" data-u="farmacia_sj" data-p="cliente123" style="font-size: 0.8rem; transition: background-color 0.15s ease;">
+                                <div>
+                                    <div class="fw-semibold text-body">Farmacia San José</div>
+                                    <div class="text-muted" style="font-size: 0.72rem;">Almacén de insumos y medicamentos</div>
+                                </div>
+                                <code class="small text-muted bg-body px-2 py-0.5 rounded border">farmacia_sj</code>
                             </button>
-                            <button type="button" class="btn sm ghost demo-quick-fill" data-u="ferre_roble" data-p="cliente123" style="font-size: 0.78rem; padding: 4px 10px; border-radius: 8px;">
-                                🔧 Ferretería El Roble
+                            <button type="button" class="btn text-start demo-quick-fill d-flex align-items-center justify-content-between py-2 px-3 border rounded-3 bg-body-tertiary" data-u="ferre_roble" data-p="cliente123" style="font-size: 0.8rem; transition: background-color 0.15s ease;">
+                                <div>
+                                    <div class="fw-semibold text-body">Ferretería El Roble</div>
+                                    <div class="text-muted" style="font-size: 0.72rem;">Almacén de herramientas y materiales</div>
+                                </div>
+                                <code class="small text-muted bg-body px-2 py-0.5 rounded border">ferre_roble</code>
                             </button>
                         </div>
                     </div>
