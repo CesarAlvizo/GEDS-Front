@@ -5,6 +5,7 @@ import {
   INITIAL_PROVIDERS,
   INITIAL_CLIENTS,
   INITIAL_PRODUCTS,
+  INITIAL_USERS,
   generateInitialMovements
 } from './initialData.js';
 
@@ -25,6 +26,7 @@ class LocalStorageAdapter {
     localStorage.setItem(this.keys.UNITS, JSON.stringify(INITIAL_UNITS));
     localStorage.setItem(this.keys.PROVIDERS, JSON.stringify(INITIAL_PROVIDERS));
     localStorage.setItem(this.keys.CLIENTS, JSON.stringify(INITIAL_CLIENTS));
+    localStorage.setItem(this.keys.USERS, JSON.stringify(INITIAL_USERS));
     localStorage.setItem(this.keys.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
     localStorage.setItem(this.keys.MOVEMENTS, JSON.stringify(generateInitialMovements()));
     localStorage.setItem(this.keys.INITIALIZED, 'true');

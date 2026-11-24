@@ -24,6 +24,21 @@ export function getDatabase() {
 }
 
 function initSchema(db) {
+  // Asegurar migración de columnas si la tabla ya existía
+  try {
+    const prodCols = db.prepare('PRAGMA table_info(productos)').all();
+    if (!prodCols.some(c => c.name === 'usuario_id')) {
+      db.exec('ALTER TABLE productos ADD COLUMN usuario_id INTEGER DEFAULT 1;');
+    }
+  } catch (e) {}
+
+  try {
+    const movCols = db.prepare('PRAGMA table_info(movimientos)').all();
+    if (!movCols.some(c => c.name === 'usuario_id')) {
+      db.exec('ALTER TABLE movimientos ADD COLUMN usuario_id INTEGER DEFAULT 1;');
+    }
+  } catch (e) {}
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -146,75 +161,97 @@ function initSchema(db) {
 }
 
 function seedInitialData(db) {
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM usuarios').get().count;
-  if (userCount === 0) {
-    // Insertar usuario administrador por defecto
-    const insertUser = db.prepare(`
-      INSERT INTO usuarios (username, password_hash, nombre, rol, activo)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    insertUser.run('admin', 'admin', 'Administrador General', 'ADMIN', 1);
+  const insertUser = db.prepare(`
+    INSERT OR IGNORE INTO usuarios (id, username, password_hash, nombre, rol, activo)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
 
-    // Categorias
-    const insertCat = db.prepare('INSERT OR IGNORE INTO categorias (nombre) VALUES (?)');
-    ['Papelería', 'Limpieza', 'Herramientas', 'Alimentos', 'Electrónica'].forEach(cat => insertCat.run(cat));
+  // 1. Super Administrador General
+  insertUser.run(1, 'admin', 'admin', 'Administrador General', 'ADMIN', 1);
 
-    // Unidades
-    const insertUnit = db.prepare('INSERT OR IGNORE INTO unidades_medida (nombre) VALUES (?)');
-    ['Pieza', 'Caja', 'Paquete', 'Kilogramo', 'Gramo', 'Litro', 'Metro'].forEach(u => insertUnit.run(u));
+  // 2. Cliente 1: Farmacia San José
+  insertUser.run(2, 'farmacia_sj', 'cliente123', 'Farmacia San José', 'ADMIN', 1);
 
-    // Proveedores
+  // 3. Cliente 2: Ferretería El Roble
+  insertUser.run(3, 'ferre_roble', 'cliente123', 'Ferretería El Roble', 'ADMIN', 1);
+
+  // Categorias base
+  const insertCat = db.prepare('INSERT OR IGNORE INTO categorias (nombre) VALUES (?)');
+  ['Papelería', 'Limpieza', 'Herramientas', 'Alimentos', 'Electrónica', 'Medicamentos', 'Ferretería'].forEach(cat => insertCat.run(cat));
+
+  // Unidades base
+  const insertUnit = db.prepare('INSERT OR IGNORE INTO unidades_medida (nombre) VALUES (?)');
+  ['Pieza', 'Caja', 'Paquete', 'Kilogramo', 'Gramo', 'Litro', 'Metro'].forEach(u => insertUnit.run(u));
+
+  // Proveedores
+  const provCount = db.prepare('SELECT COUNT(*) as count FROM proveedores').get().count;
+  if (provCount === 0) {
     const insertProv = db.prepare('INSERT INTO proveedores (nombre, telefono, correo) VALUES (?, ?, ?)');
     insertProv.run('Distribuidora del Centro', '449 123 4567', 'ventas@dcentro.mx');
     insertProv.run('Insumos Bajío', '449 765 4321', 'contacto@insumosbajio.mx');
     insertProv.run('Ferretera Aguascalientes', '449 555 0182', 'pedidos@ferreags.mx');
+  }
 
-    // Clientes
+  // Clientes
+  const clientCount = db.prepare('SELECT COUNT(*) as count FROM clientes').get().count;
+  if (clientCount === 0) {
     const insertClient = db.prepare('INSERT INTO clientes (nombre, telefono, correo) VALUES (?, ?, ?)');
     insertClient.run('Mostrador general', '—', '—');
     insertClient.run('Comercial Rivera', '449 222 3344', 'compras@rivera.mx');
+  }
 
-    // Productos
+  // Verificar si ya existen productos para los clientes prueba
+  const prodUser2 = db.prepare('SELECT COUNT(*) as count FROM productos WHERE usuario_id = 2').get().count;
+  if (prodUser2 === 0) {
     const insertProd = db.prepare(`
-      INSERT INTO productos (id, codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
+      INSERT INTO productos (usuario_id, codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const initialProducts = [
-      [1, 'PAP-001', 'Hojas blancas carta', 'Paquete 500 hojas', 'Papelería', 'Paquete', 68, 95, 84, 30, 1],
-      [2, 'LIM-014', 'Cloro 1 L', 'Blanqueador líquido', 'Limpieza', 'Litro', 14, 22, 12, 25, 1],
-      [3, 'HER-032', 'Martillo de uña', 'Mango de fibra', 'Herramientas', 'Pieza', 120, 180, 18, 10, 1],
-      [4, 'ALI-007', 'Arroz blanco', 'Grano largo', 'Alimentos', 'Kilogramo', 19, 28, 240, 80, 1],
-      [5, 'ELE-021', 'Cable USB-C 1 m', 'Carga rápida', 'Electrónica', 'Pieza', 45, 89, 9, 15, 1],
-      [6, 'PAP-009', 'Marcadores permanentes', 'Caja con 12', 'Papelería', 'Caja', 90, 140, 26, 12, 1],
-      [7, 'LIM-020', 'Jabón líquido 5 L', 'Manos, uso general', 'Limpieza', 'Litro', 75, 120, 40, 20, 1],
-      [8, 'HER-045', 'Cinta métrica', '5 metros', 'Herramientas', 'Pieza', 35, 60, 5, 8, 1]
-    ];
-    for (const p of initialProducts) {
-      insertProd.run(...p);
-    }
 
-    // Movimientos
+    // Productos para Farmacia San José (usuario_id: 2)
+    const p1 = insertProd.run(2, 'MED-001', 'Paracetamol 500mg', 'Caja con 20 tabletas', 'Medicamentos', 'Caja', 18.5, 35.0, 150, 40, 1);
+    const p2 = insertProd.run(2, 'MED-002', 'Amoxicilina 500mg', 'Caja con 12 cápsulas', 'Medicamentos', 'Caja', 45.0, 85.0, 65, 20, 1);
+    const p3 = insertProd.run(2, 'MED-003', 'Alcohol Etílico 70% 500ml', 'Antiséptico en botella', 'Limpieza', 'Pieza', 22.0, 42.0, 12, 25, 1); // Stock bajo
+    const p4 = insertProd.run(2, 'MED-004', 'Cubrebocas Tricapa', 'Caja con 50 piezas', 'Limpieza', 'Caja', 35.0, 65.0, 80, 30, 1);
+    const p5 = insertProd.run(2, 'MED-005', 'Ibuprofeno 400mg', 'Caja con 10 cápsulas', 'Medicamentos', 'Caja', 28.0, 52.0, 95, 30, 1);
+
+    // Movimientos para Farmacia San José
     const insertMov = db.prepare(`
-      INSERT INTO movimientos (id, fecha, pid, tipo, cant, motivo, obs)
+      INSERT INTO movimientos (usuario_id, fecha, pid, tipo, cant, motivo, obs)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    const initialMovements = [
-      [1, '2026-10-31', 1, 'E', 40, 'Compra a proveedor', ''],
-      [2, '2026-10-31', 2, 'S', 8, 'Venta', ''],
-      [3, '2026-10-30', 4, 'E', 100, 'Compra a proveedor', ''],
-      [4, '2026-10-30', 5, 'S', 6, 'Venta', ''],
-      [5, '2026-10-29', 3, 'S', 2, 'Venta', ''],
-      [6, '2026-10-28', 6, 'E', 12, 'Compra a proveedor', ''],
-      [7, '2026-10-28', 8, 'S', 3, 'Ajuste autorizado', ''],
-      [8, '2026-10-27', 7, 'E', 20, 'Compra a proveedor', ''],
-      [9, '2026-10-27', 1, 'S', 16, 'Venta', ''],
-      [10, '2026-10-26', 2, 'E', 10, 'Compra a proveedor', ''],
-      [11, '2026-10-26', 5, 'S', 4, 'Venta', ''],
-      [12, '2026-10-25', 4, 'S', 30, 'Venta', '']
-    ];
-    for (const m of initialMovements) {
-      insertMov.run(...m);
-    }
+    insertMov.run(2, '2026-11-20', Number(p1.lastInsertRowid), 'E', 200, 'Recepción de pedido', 'Lote FAR-2026-A');
+    insertMov.run(2, '2026-11-21', Number(p1.lastInsertRowid), 'S', 50, 'Venta a mostrador', 'Ticket #1021');
+    insertMov.run(2, '2026-11-21', Number(p2.lastInsertRowid), 'E', 80, 'Recepción de pedido', 'Distribuidora Médica');
+    insertMov.run(2, '2026-11-22', Number(p2.lastInsertRowid), 'S', 15, 'Venta a mostrador', 'Ticket #1045');
+    insertMov.run(2, '2026-11-22', Number(p3.lastInsertRowid), 'E', 30, 'Compra local', 'Reposición');
+    insertMov.run(2, '2026-11-23', Number(p3.lastInsertRowid), 'S', 18, 'Venta corporativa', 'Clínica dental');
+  }
+
+  const prodUser3 = db.prepare('SELECT COUNT(*) as count FROM productos WHERE usuario_id = 3').get().count;
+  if (prodUser3 === 0) {
+    const insertProd = db.prepare(`
+      INSERT INTO productos (usuario_id, codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    // Productos para Ferretería El Roble (usuario_id: 3)
+    const f1 = insertProd.run(3, 'FER-010', 'Taladro Percutor 650W', 'Mandril de 1/2 pulgada', 'Herramientas', 'Pieza', 650.0, 999.0, 14, 5, 1);
+    const f2 = insertProd.run(3, 'FER-011', 'Juego de Destornilladores', 'Kit de 6 piezas cromo vanadio', 'Herramientas', 'Pieza', 110.0, 189.0, 4, 10, 1); // Stock bajo
+    const f3 = insertProd.run(3, 'FER-012', 'Tornillo para Madera 2"', 'Caja de 100 piezas', 'Ferretería', 'Caja', 40.0, 75.0, 220, 50, 1);
+    const f4 = insertProd.run(3, 'FER-013', 'Disco de Corte Metal 4-1/2"', 'Extra fino 1mm', 'Herramientas', 'Pieza', 15.0, 32.0, 350, 80, 1);
+    const f5 = insertProd.run(3, 'FER-014', 'Pintura Blanca Vinílica 19L', 'Cubeta acabado mate', 'Limpieza', 'Pieza', 780.0, 1250.0, 18, 8, 1);
+
+    const insertMov = db.prepare(`
+      INSERT INTO movimientos (usuario_id, fecha, pid, tipo, cant, motivo, obs)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertMov.run(3, '2026-11-18', Number(f1.lastInsertRowid), 'E', 20, 'Compra a mayorista', 'Factura FER-882');
+    insertMov.run(3, '2026-11-19', Number(f1.lastInsertRowid), 'S', 6, 'Venta a contratista', 'Obra Las Américas');
+    insertMov.run(3, '2026-11-20', Number(f3.lastInsertRowid), 'E', 300, 'Recepción directa', 'Insumos Industriales');
+    insertMov.run(3, '2026-11-21', Number(f3.lastInsertRowid), 'S', 80, 'Venta por mayoreo', 'Carpintería Moderna');
+    insertMov.run(3, '2026-11-22', Number(f4.lastInsertRowid), 'E', 400, 'Pedido quincenal', 'Aceros del Bajío');
+    insertMov.run(3, '2026-11-23', Number(f4.lastInsertRowid), 'S', 50, 'Venta al público', 'Mostrador');
   }
 }
 
