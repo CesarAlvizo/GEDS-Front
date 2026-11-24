@@ -456,6 +456,136 @@
   border-radius: 6px;
 }
 
+.demo-accounts-panel {
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+}
+
+.demo-accounts-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  user-select: none;
+}
+
+.demo-accounts-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.demo-summary-label,
+.demo-summary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.demo-summary-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.demo-account-icon {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.demo-summary-action {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.demo-summary-action span {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  transition: transform .2s ease;
+}
+
+.demo-accounts-panel[open] .demo-summary-action span {
+  transform: rotate(45deg);
+}
+
+.demo-accounts-panel summary:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+
+.demo-accounts-grid {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  animation: fade .18s ease both;
+}
+
+.demo-quick-fill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+.demo-quick-fill:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: var(--surface-2);
+}
+
+.demo-admin-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #7257d8;
+  font-weight: 650;
+}
+
+.demo-admin-label svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.demo-quick-fill code {
+  max-width: 42%;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
 @media (min-width: 901px) and (max-height: 850px) {
   .lp {
     padding: 24px 32px;

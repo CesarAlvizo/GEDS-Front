@@ -332,38 +332,23 @@ c0 85 -56 176 -123 201 -41 16 -127 13 -162 -5z" />
                     <button type="submit" class="btn primary lgbtn w-100" id="login-submit"><span
                             class="lbl">Entrar</span><i class="spin" aria-hidden="true"></i></button>
 
-                    <!-- Selector elegante de cuentas demo -->
-                    <div class="demo-accounts-panel mt-4 pt-3 border-top" style="border-color: var(--b, #e2e8f0) !important;">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted, #64748b);">
-                                Cuentas de demostración
-                            </span>
-                            <span style="font-size: 0.7rem; color: var(--muted, #94a3b8);">Autocompletar</span>
-                        </div>
-                        <div class="d-grid gap-1">
-                            <button type="button" class="btn text-start demo-quick-fill d-flex align-items-center justify-content-between py-2 px-3 border rounded-3 bg-body-tertiary" data-u="admin" data-p="admin" style="font-size: 0.8rem; transition: background-color 0.15s ease;">
-                                <div>
-                                    <div class="fw-semibold text-body">Administrador Principal</div>
-                                    <div class="text-muted" style="font-size: 0.72rem;">Consola de clientes y control central</div>
-                                </div>
-                                <code class="small text-muted bg-body px-2 py-0.5 rounded border">admin</code>
+                    <details class="demo-accounts-panel">
+                        <summary>
+                            <span class="demo-summary-label"><span class="demo-account-icon" aria-hidden="true">▣</span> Cuentas de demostración</span>
+                            <span class="demo-summary-action">Mostrar <span aria-hidden="true">＋</span></span>
+                        </summary>
+                        <div class="demo-accounts-grid">
+                            <button type="button" class="demo-quick-fill" data-u="admin" data-p="admin">
+                                <span class="demo-admin-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5.2c0 4.5-2.9 7.6-7 9.8-4.1-2.2-7-5.3-7-9.8V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>Superadministrador</span><code>admin</code>
                             </button>
-                            <button type="button" class="btn text-start demo-quick-fill d-flex align-items-center justify-content-between py-2 px-3 border rounded-3 bg-body-tertiary" data-u="farmacia_sj" data-p="cliente123" style="font-size: 0.8rem; transition: background-color 0.15s ease;">
-                                <div>
-                                    <div class="fw-semibold text-body">Farmacia San José</div>
-                                    <div class="text-muted" style="font-size: 0.72rem;">Almacén de insumos y medicamentos</div>
-                                </div>
-                                <code class="small text-muted bg-body px-2 py-0.5 rounded border">farmacia_sj</code>
+                            <button type="button" class="demo-quick-fill" data-u="farmacia_sj" data-p="cliente123">
+                                <span>Farmacia San José</span><code>farmacia_sj</code>
                             </button>
-                            <button type="button" class="btn text-start demo-quick-fill d-flex align-items-center justify-content-between py-2 px-3 border rounded-3 bg-body-tertiary" data-u="ferre_roble" data-p="cliente123" style="font-size: 0.8rem; transition: background-color 0.15s ease;">
-                                <div>
-                                    <div class="fw-semibold text-body">Ferretería El Roble</div>
-                                    <div class="text-muted" style="font-size: 0.72rem;">Almacén de herramientas y materiales</div>
-                                </div>
-                                <code class="small text-muted bg-body px-2 py-0.5 rounded border">ferre_roble</code>
+                            <button type="button" class="demo-quick-fill" data-u="ferre_roble" data-p="cliente123">
+                                <span>Ferretería El Roble</span><code>ferre_roble</code>
                             </button>
                         </div>
-                    </div>
+                    </details>
                 </form>
             </section>
         </main>
