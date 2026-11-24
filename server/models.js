@@ -23,6 +23,39 @@ export const UserModel = {
     `);
     const user = stmt.get(Number(id));
     return user || null;
+  },
+
+  getAll() {
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT id, username, nombre, rol, activo, created_at FROM usuarios ORDER BY id ASC');
+    return stmt.all();
+  },
+
+  create(userData) {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      INSERT INTO usuarios (username, password_hash, nombre, rol, activo)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    const res = stmt.run(
+      String(userData.username).trim(),
+      String(userData.password || 'admin123').trim(),
+      String(userData.nombre || userData.username).trim(),
+      'ADMIN',
+      1
+    );
+    return this.findById(res.lastInsertRowid);
+  },
+
+  delete(id) {
+    const db = getDatabase();
+    // Evitar borrar el usuario 1 principal
+    if (Number(id) === 1) {
+      throw new Error('No se puede eliminar el usuario administrador principal.');
+    }
+    const stmt = db.prepare('DELETE FROM usuarios WHERE id = ?');
+    stmt.run(Number(id));
+    return true;
   }
 };
 
@@ -32,6 +65,11 @@ export const ProductModel = {
     let sql = 'SELECT * FROM productos WHERE 1=1';
     const params = [];
 
+    if (filters.usuario_id) {
+      sql += ' AND usuario_id = ?';
+      params.push(Number(filters.usuario_id));
+    }
+
     if (filters.category) {
       sql += ' AND categoria = ?';
       params.push(String(filters.category));
@@ -39,10 +77,6 @@ export const ProductModel = {
 
     if (filters.onlyLowStock) {
       sql += ' AND stock <= min';
-    }
-
-    if (filters.activeOnly !== false) {
-      // Por defecto lista todos o filtrado
     }
 
     sql += ' ORDER BY id DESC';
@@ -131,6 +165,11 @@ export const MovementModel = {
     const db = getDatabase();
     let sql = 'SELECT * FROM movimientos WHERE 1=1';
     const params = [];
+
+    if (filters.usuario_id) {
+      sql += ' AND usuario_id = ?';
+      params.push(Number(filters.usuario_id));
+    }
 
     if (filters.fromDate) {
       sql += ' AND fecha >= ?';
@@ -295,10 +334,11 @@ export const StoredProcedures = {
       // Inserción del movimiento. 
       // El TRIGGER trg_actualiza_stock_movimiento actualizará automáticamente el stock en la tabla productos
       const insertStmt = db.prepare(`
-        INSERT INTO movimientos (fecha, pid, tipo, cant, motivo, obs)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO movimientos (usuario_id, fecha, pid, tipo, cant, motivo, obs)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       const res = insertStmt.run(
+        Number(movementData.usuario_id || 1),
         String(movementData.fecha),
         Number(movementData.pid),
         String(movementData.tipo),
@@ -326,16 +366,18 @@ export const StoredProcedures = {
     const db = getDatabase();
     db.exec('BEGIN TRANSACTION;');
     try {
-      const checkCode = db.prepare('SELECT id FROM productos WHERE codigo = ?').get(String(productData.codigo).trim());
+      const uId = Number(productData.usuario_id || 1);
+      const checkCode = db.prepare('SELECT id FROM productos WHERE codigo = ? AND usuario_id = ?').get(String(productData.codigo).trim(), uId);
       if (checkCode) {
-        throw new Error(`Procedimiento Almacenado: El código ${productData.codigo} ya existe en el sistema`);
+        throw new Error(`Procedimiento Almacenado: El código ${productData.codigo} ya existe en tu almacén`);
       }
 
       const stmt = db.prepare(`
-        INSERT INTO productos (codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO productos (usuario_id, codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const res = stmt.run(
+        uId,
         String(productData.codigo).trim(),
         String(productData.nombre).trim(),
         String(productData.desc || '').trim(),

@@ -61,7 +61,8 @@ function initSchema(db) {
 
     CREATE TABLE IF NOT EXISTS productos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      codigo TEXT UNIQUE NOT NULL,
+      usuario_id INTEGER DEFAULT 1,
+      codigo TEXT NOT NULL,
       nombre TEXT NOT NULL,
       desc TEXT,
       categoria TEXT NOT NULL,
@@ -72,11 +73,13 @@ function initSchema(db) {
       min REAL DEFAULT 0.0,
       activo INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
 
     CREATE TABLE IF NOT EXISTS movimientos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuario_id INTEGER DEFAULT 1,
       fecha TEXT NOT NULL,
       pid INTEGER NOT NULL,
       tipo TEXT CHECK(tipo IN ('E', 'S')) NOT NULL,
@@ -84,7 +87,8 @@ function initSchema(db) {
       motivo TEXT DEFAULT '',
       obs TEXT DEFAULT '',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (pid) REFERENCES productos(id)
+      FOREIGN KEY (pid) REFERENCES productos(id),
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
 
     -- =========================================================================

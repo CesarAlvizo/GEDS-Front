@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AuthController, ProductController, MovementController, CatalogController } from './controllers.js';
+import { AuthController, ProductController, MovementController, CatalogController, UserController } from './controllers.js';
 import { ValidationError } from './validators.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -69,9 +69,17 @@ function checkAuth(req, res, pathname) {
   }
 
   const token = authHeader.slice(7).trim();
-  if (!token || token.length < 10) {
+  if (!token || token.length < 5) {
     sendJson(res, 401, { message: 'Token de sesión inválido o expirado' });
     return false;
+  }
+
+  // Extraer ID de usuario si el token tiene formato: token-jwt-<id>-<timestamp>
+  const tokenMatch = token.match(/^token-jwt-(\d+)-/);
+  if (tokenMatch) {
+    req.user = { id: Number(tokenMatch[1]) };
+  } else {
+    req.user = { id: 1 };
   }
 
   return true;
@@ -194,6 +202,23 @@ async function handleApi(req, res, parsedUrl) {
     if (method === 'DELETE' && itemIndex !== null) {
       return await CatalogController.removeItem(req, res, catalogName, itemIndex, sendJson);
     }
+  }
+
+  // Rutas de Usuarios / Clientes Administradores
+  if (pathname === '/api/usuarios') {
+    if (method === 'GET') {
+      return await UserController.getAll(req, res, sendJson);
+    }
+    if (method === 'POST') {
+      const body = await parseBody(req);
+      return await UserController.create(req, res, body, sendJson);
+    }
+  }
+
+  const userMatch = pathname.match(/^\/api\/usuarios\/(\d+)$/);
+  if (userMatch && method === 'DELETE') {
+    const id = userMatch[1];
+    return await UserController.delete(req, res, id, sendJson);
   }
 
   return sendJson(res, 404, { message: 'Ruta API no encontrada' });

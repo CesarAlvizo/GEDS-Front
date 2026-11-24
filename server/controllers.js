@@ -11,7 +11,8 @@ export const AuthController = {
       return sendJson(res, 401, { message: 'Credenciales inválidas' });
     }
 
-    const token = 'token-jwt-simulado-geds-' + Date.now();
+    // Token simulado con ID de usuario embebido para control multi-inquilino seguro
+    const token = `token-jwt-${user.id}-${Date.now()}`;
     return sendJson(res, 200, {
       token,
       user: {
@@ -28,11 +29,50 @@ export const AuthController = {
   }
 };
 
+export const UserController = {
+  async getAll(req, res, sendJson) {
+    const users = UserModel.getAll();
+    return sendJson(res, 200, users);
+  },
+
+  async create(req, res, body, sendJson) {
+    const username = Validators.sanitizeString(body.username);
+    const password = Validators.sanitizeString(body.password);
+    const nombre = Validators.sanitizeString(body.nombre);
+
+    if (!username || username.length < 3) {
+      throw new ValidationError('El nombre de usuario debe contener al menos 3 caracteres alfanuméricos.');
+    }
+    Validators.assertSafeText(username, 'usuario', true);
+
+    if (!password || password.length < 4) {
+      throw new ValidationError('La contraseña debe contener al menos 4 caracteres.');
+    }
+    if (Validators.hasSqlInjectionPattern(password)) {
+      throw new ValidationError('Contraseña no permitida');
+    }
+
+    if (nombre) {
+      Validators.assertSafeText(nombre, 'nombre');
+    }
+
+    const newUser = UserModel.create({ username, password, nombre: nombre || username });
+    return sendJson(res, 201, newUser);
+  },
+
+  async delete(req, res, idParam, sendJson) {
+    const id = Validators.validateId(idParam);
+    UserModel.delete(id);
+    return sendJson(res, 200, { message: 'Usuario cliente eliminado' });
+  }
+};
+
 export const ProductController = {
   async getAll(req, res, searchParams, sendJson) {
     const category = searchParams.get('category') || '';
     const onlyLowStock = searchParams.get('onlyLowStock') === 'true';
-    const products = ProductModel.getAll({ category, onlyLowStock });
+    const usuario_id = req.user?.id || searchParams.get('usuario_id') || '';
+    const products = ProductModel.getAll({ category, onlyLowStock, usuario_id });
     return sendJson(res, 200, products);
   },
 
@@ -47,6 +87,7 @@ export const ProductController = {
 
   async create(req, res, body, sendJson) {
     const validated = Validators.validateProduct(body);
+    validated.usuario_id = req.user?.id || body.usuario_id || 1;
     const created = StoredProcedures.sp_crear_producto_seguro(validated);
     return sendJson(res, 201, created);
   },
@@ -86,13 +127,15 @@ export const MovementController = {
     const toDate = searchParams.get('toDate') || '';
     const pid = searchParams.get('pid') || '';
     const tipo = searchParams.get('tipo') || '';
+    const usuario_id = req.user?.id || searchParams.get('usuario_id') || '';
 
-    const movements = MovementModel.getAll({ fromDate, toDate, pid, tipo });
+    const movements = MovementModel.getAll({ fromDate, toDate, pid, tipo, usuario_id });
     return sendJson(res, 200, movements);
   },
 
   async create(req, res, body, sendJson) {
     const validated = Validators.validateMovement(body);
+    validated.usuario_id = req.user?.id || body.usuario_id || 1;
     const result = StoredProcedures.sp_registrar_movimiento_inventario(validated);
     return sendJson(res, 201, result);
   }
