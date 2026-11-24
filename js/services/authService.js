@@ -5,15 +5,26 @@ import { apiClient } from './apiClient.js';
 class AuthService {
   async login(username, password) {
     if (CONFIG.USE_MOCK) {
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      if (username === 'admin' && password === 'admin') {
+      const users = storageAdapter.getCatalog('users') || [];
+      // Cuentas demo soportadas en mock
+      let found = users.find(u => u.username === username);
+      if (!found && username === 'admin' && password === 'admin') {
+        found = { id: 1, username: 'admin', nombre: 'Super Administrador', rol: 'SUPERADMIN', activo: true };
+      } else if (!found && username === 'farmacia_sj' && password === 'cliente123') {
+        found = { id: 2, username: 'farmacia_sj', nombre: 'Farmacia San José', rol: 'ADMIN', activo: true };
+      } else if (!found && username === 'ferre_roble' && password === 'cliente123') {
+        found = { id: 3, username: 'ferre_roble', nombre: 'Ferretería El Roble', rol: 'ADMIN', activo: true };
+      }
+
+      if (found) {
         const user = {
-          id: 1,
-          username: 'admin',
-          nombre: 'Administrador General',
-          rol: 'ADMIN',
-          avatar: 'AD'
+          id: found.id,
+          username: found.username,
+          nombre: found.nombre,
+          rol: found.id === 1 ? 'SUPERADMIN' : 'ADMIN',
+          avatar: found.username.slice(0, 2).toUpperCase()
         };
         storageAdapter.setSession(user);
         return user;
@@ -25,8 +36,10 @@ class AuthService {
       if (data && data.token) {
         localStorage.setItem(CONFIG.STORAGE_KEYS.TOKEN, data.token);
       }
-      storageAdapter.setSession(data.user || { username, rol: 'ADMIN' });
-      return data.user;
+      const role = (data.user?.id === 1 || data.user?.username === 'admin') ? 'SUPERADMIN' : (data.user?.rol || 'ADMIN');
+      const user = { ...(data.user || { username }), rol: role };
+      storageAdapter.setSession(user);
+      return user;
     }
   }
 

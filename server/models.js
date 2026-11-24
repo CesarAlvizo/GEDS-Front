@@ -27,8 +27,44 @@ export const UserModel = {
 
   getAll() {
     const db = getDatabase();
-    const stmt = db.prepare('SELECT id, username, nombre, rol, activo, created_at FROM usuarios ORDER BY id ASC');
+    const stmt = db.prepare(`
+      SELECT 
+        u.id, 
+        u.username, 
+        u.nombre, 
+        u.rol, 
+        u.activo, 
+        u.created_at,
+        COUNT(DISTINCT p.id) as total_productos,
+        COUNT(DISTINCT m.id) as total_movimientos
+      FROM usuarios u
+      LEFT JOIN productos p ON p.usuario_id = u.id AND p.activo = 1
+      LEFT JOIN movimientos m ON m.usuario_id = u.id
+      GROUP BY u.id
+      ORDER BY u.id ASC
+    `);
     return stmt.all();
+  },
+
+  toggleActivo(id) {
+    const db = getDatabase();
+    if (Number(id) === 1) {
+      throw new Error('No se puede desactivar el usuario administrador principal.');
+    }
+    const user = this.findById(id);
+    if (!user) throw new Error('Usuario no encontrado');
+    const nuevoEstado = user.activo === 1 ? 0 : 1;
+    db.prepare('UPDATE usuarios SET activo = ? WHERE id = ?').run(nuevoEstado, Number(id));
+    return this.findById(id);
+  },
+
+  getSystemStats() {
+    const db = getDatabase();
+    const totalTenants = db.prepare("SELECT COUNT(*) as count FROM usuarios WHERE id != 1").get().count;
+    const activeTenants = db.prepare("SELECT COUNT(*) as count FROM usuarios WHERE id != 1 AND activo = 1").get().count;
+    const totalProducts = db.prepare("SELECT COUNT(*) as count FROM productos WHERE activo = 1").get().count;
+    const totalMovements = db.prepare("SELECT COUNT(*) as count FROM movimientos").get().count;
+    return { totalTenants, activeTenants, totalProducts, totalMovements };
   },
 
   create(userData) {

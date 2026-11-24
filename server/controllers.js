@@ -32,7 +32,14 @@ export const AuthController = {
 export const UserController = {
   async getAll(req, res, sendJson) {
     const users = UserModel.getAll();
-    return sendJson(res, 200, users);
+    const stats = UserModel.getSystemStats();
+    return sendJson(res, 200, { users, stats });
+  },
+
+  async toggleStatus(req, res, idParam, sendJson) {
+    const id = Validators.validateId(idParam);
+    const updated = UserModel.toggleActivo(id);
+    return sendJson(res, 200, updated);
   },
 
   async create(req, res, body, sendJson) {

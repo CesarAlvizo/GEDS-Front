@@ -215,6 +215,12 @@ async function handleApi(req, res, parsedUrl) {
     }
   }
 
+  const userToggleMatch = pathname.match(/^\/api\/usuarios\/(\d+)\/toggle$/);
+  if (userToggleMatch && (method === 'PUT' || method === 'POST')) {
+    const id = userToggleMatch[1];
+    return await UserController.toggleStatus(req, res, id, sendJson);
+  }
+
   const userMatch = pathname.match(/^\/api\/usuarios\/(\d+)$/);
   if (userMatch && method === 'DELETE') {
     const id = userMatch[1];

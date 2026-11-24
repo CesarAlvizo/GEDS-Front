@@ -30,9 +30,30 @@ class CatalogService {
   // Métodos para la gestión de usuarios administradores clientes
   async getUsers() {
     if (CONFIG.USE_MOCK) {
-      return storageAdapter.getCatalog('users');
+      const users = storageAdapter.getCatalog('users');
+      const stats = {
+        totalTenants: users.filter(u => u.id !== 1).length,
+        activeTenants: users.filter(u => u.id !== 1 && u.activo !== false).length,
+        totalProducts: (storageAdapter.getProducts() || []).length,
+        totalMovements: (storageAdapter.getMovements() || []).length
+      };
+      return { users, stats };
     } else {
       return await apiClient.get('/usuarios');
+    }
+  }
+
+  async toggleUserStatus(id) {
+    if (CONFIG.USE_MOCK) {
+      const users = storageAdapter.getCatalog('users');
+      const idx = users.findIndex(u => u.id === Number(id));
+      if (idx !== -1) {
+        users[idx].activo = !users[idx].activo;
+        storageAdapter.saveCatalog('users', users);
+        return users[idx];
+      }
+    } else {
+      return await apiClient.put(`/usuarios/${id}/toggle`, {});
     }
   }
 

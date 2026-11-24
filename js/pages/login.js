@@ -5,7 +5,16 @@ import { InputSecurity } from '../utils/validators.js';
 
 setTheme(getTheme());
 document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => setTheme(getTheme() === 'dark' ? 'light' : 'dark'));
-if (authService.isAuthenticated()) location.replace('dashboard.html');
+
+const currentUser = authService.getCurrentUser();
+if (currentUser) {
+  if (currentUser.rol === 'SUPERADMIN' || currentUser.id === 1) {
+    location.replace('admin-tenants.html');
+  } else {
+    location.replace('dashboard.html');
+  }
+}
+
 const logoutMessage = sessionStorage.getItem('geds_logout_message');
 if (logoutMessage) { sessionStorage.removeItem('geds_logout_message'); toastCard(logoutMessage); }
 const form = document.querySelector('#login-form');
@@ -14,6 +23,17 @@ const button = document.querySelector('#login-submit');
 const usernameInput = document.querySelector('#username');
 const password = document.querySelector('#password');
 const passwordToggle = document.querySelector('#password-toggle');
+
+// Autollenado rápido de credenciales demo
+document.querySelectorAll('.demo-quick-fill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    usernameInput.value = btn.dataset.u || '';
+    password.value = btn.dataset.p || '';
+    error.hidden = true;
+    usernameInput.focus();
+  });
+});
+
 passwordToggle.addEventListener('click', () => {
   const showPassword = password.type === 'password';
   password.type = showPassword ? 'text' : 'password';
@@ -36,8 +56,12 @@ form.addEventListener('submit', async event => {
   }
 
   try {
-    await authService.login(usernameVal.value, cleanPassword);
-    location.assign('dashboard.html');
+    const user = await authService.login(usernameVal.value, cleanPassword);
+    if (user.rol === 'SUPERADMIN' || user.id === 1) {
+      location.assign('admin-tenants.html');
+    } else {
+      location.assign('dashboard.html');
+    }
   } catch (err) {
     error.textContent = err.message || 'Usuario o contraseña incorrectos.';
     error.hidden = false;
