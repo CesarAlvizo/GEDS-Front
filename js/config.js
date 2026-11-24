@@ -50,7 +50,7 @@ export const CONFIG = {
     PROVIDERS: 'geds_providers',
     CLIENTS: 'geds_clients',
     USERS: 'geds_users',
-    INITIALIZED: 'geds_initialized_v2'
+    INITIALIZED: 'geds_initialized_v3'
   }
 };
 

@@ -40,10 +40,14 @@ class LocalStorageAdapter {
     }
   }
 
-  setSession(user) {
+  setSession(user, token = null) {
     if (user) {
       localStorage.setItem(this.keys.SESSION, JSON.stringify(user));
-      localStorage.setItem(this.keys.TOKEN, 'mock-jwt-token-geds-admin');
+      if (token) {
+        localStorage.setItem(this.keys.TOKEN, token);
+      } else if (!localStorage.getItem(this.keys.TOKEN)) {
+        localStorage.setItem(this.keys.TOKEN, `token-jwt-${user.id || 1}-${Date.now()}`);
+      }
     } else {
       localStorage.removeItem(this.keys.SESSION);
       localStorage.removeItem(this.keys.TOKEN);
@@ -51,20 +55,32 @@ class LocalStorageAdapter {
   }
   getProducts() {
     const raw = localStorage.getItem(this.keys.PRODUCTS);
-    return raw ? JSON.parse(raw) : [];
+    const list = raw ? JSON.parse(raw) : [];
+    const session = this.getSession();
+    if (!session || session.rol === 'SUPERADMIN' || session.id === 1) {
+      return list;
+    }
+    // Filtrar por el usuario actual
+    return list.filter(p => Number(p.usuario_id || 1) === Number(session.id));
   }
 
   saveProducts(products) {
+    // Si estamos guardando la lista completa global
     localStorage.setItem(this.keys.PRODUCTS, JSON.stringify(products));
   }
 
   getProductById(id) {
-    const products = this.getProducts();
+    const raw = localStorage.getItem(this.keys.PRODUCTS);
+    const products = raw ? JSON.parse(raw) : [];
     return products.find(p => String(p.id) === String(id)) || null;
   }
 
   saveProduct(productData) {
-    const products = this.getProducts();
+    const raw = localStorage.getItem(this.keys.PRODUCTS);
+    const products = raw ? JSON.parse(raw) : [];
+    const session = this.getSession();
+    const userId = session?.id || 1;
+
     if (productData.id) {
       const idx = products.findIndex(p => String(p.id) === String(productData.id));
       if (idx !== -1) {
@@ -75,6 +91,7 @@ class LocalStorageAdapter {
     }
     const newProduct = {
       ...productData,
+      usuario_id: userId,
       id: Date.now(),
       activo: true
     };
@@ -96,7 +113,11 @@ class LocalStorageAdapter {
   getMovements() {
     const raw = localStorage.getItem(this.keys.MOVEMENTS);
     const movs = raw ? JSON.parse(raw) : [];
-    return movs.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+    const session = this.getSession();
+    const filtered = (!session || session.rol === 'SUPERADMIN' || session.id === 1)
+      ? movs
+      : movs.filter(m => Number(m.usuario_id || 1) === Number(session.id));
+    return filtered.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
   }
 
   saveMovements(movements) {
@@ -104,8 +125,12 @@ class LocalStorageAdapter {
   }
 
   createMovement(movementData) {
-    const products = this.getProducts();
-    const product = products.find(p => String(p.id) === String(movementData.pid));
+    const raw = localStorage.getItem(this.keys.PRODUCTS);
+    const allProducts = raw ? JSON.parse(raw) : [];
+    const session = this.getSession();
+    const userId = session?.id || 1;
+
+    const product = allProducts.find(p => String(p.id) === String(movementData.pid));
 
     if (!product) {
       throw new Error('Producto no encontrado');
@@ -124,10 +149,13 @@ class LocalStorageAdapter {
     } else {
       product.stock -= cant;
     }
-    this.saveProducts(products);
-    const movements = this.getMovements();
+    this.saveProducts(allProducts);
+
+    const rawMovs = localStorage.getItem(this.keys.MOVEMENTS);
+    const movements = rawMovs ? JSON.parse(rawMovs) : [];
     const newMov = {
       id: Date.now(),
+      usuario_id: userId,
       fecha: movementData.fecha,
       pid: product.id,
       tipo: movementData.tipo,

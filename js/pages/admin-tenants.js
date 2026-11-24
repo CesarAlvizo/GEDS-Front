@@ -1,36 +1,8 @@
 import { catalogService } from '../services/catalogService.js';
 import { authService } from '../services/authService.js';
-import { setTheme, getTheme } from '../components/shell.js';
 import { confirmBox } from '../components/modal.js';
 import { notify } from './common.js';
 import { InputSecurity } from '../utils/validators.js';
-
-setTheme(getTheme());
-document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
-  setTheme(getTheme() === 'dark' ? 'light' : 'dark');
-});
-
-const notify = (msg, type = 'check') => toast(msg, type);
-const side = document.querySelector('#side');
-const scrim = document.querySelector('#scrim');
-if (mbtn && side && scrim) {
-  const toggle = () => {
-    const open = side.classList.toggle('open');
-    scrim.classList.toggle('open', open);
-    mbtn.setAttribute('aria-expanded', String(open));
-  };
-  mbtn.addEventListener('click', toggle);
-  scrim.addEventListener('click', toggle);
-}
-
-document.querySelectorAll('[data-logout]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    confirmBox('Cerrar sesión', '¿Deseas salir del panel de administración maestro?', 'Salir', () => {
-      authService.logout();
-      location.replace('login.html');
-    });
-  });
-});
 
 const tbody = document.querySelector('#tenants-tbody');
 const kpiTotalTenants = document.querySelector('#kpi-total-tenants');

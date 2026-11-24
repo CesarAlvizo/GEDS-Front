@@ -26,19 +26,17 @@ class AuthService {
           rol: found.id === 1 ? 'SUPERADMIN' : 'ADMIN',
           avatar: found.username.slice(0, 2).toUpperCase()
         };
-        storageAdapter.setSession(user);
+        const mockToken = `token-jwt-${user.id}-${Date.now()}`;
+        storageAdapter.setSession(user, mockToken);
         return user;
       } else {
         throw new Error('Usuario o contraseña incorrectos');
       }
     } else {
       const data = await apiClient.post(CONFIG.ENDPOINTS.AUTH.LOGIN, { username, password });
-      if (data && data.token) {
-        localStorage.setItem(CONFIG.STORAGE_KEYS.TOKEN, data.token);
-      }
       const role = (data.user?.id === 1 || data.user?.username === 'admin') ? 'SUPERADMIN' : (data.user?.rol || 'ADMIN');
       const user = { ...(data.user || { username }), rol: role };
-      storageAdapter.setSession(user);
+      storageAdapter.setSession(user, data.token || null);
       return user;
     }
   }

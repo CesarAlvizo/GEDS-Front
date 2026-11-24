@@ -1,7 +1,17 @@
 import { catalogService } from '../services/catalogService.js';
+import { authService } from '../services/authService.js';
 import { confirmBox } from '../components/modal.js';
 import { notify, makeCell } from './common.js';
 import { InputSecurity } from '../utils/validators.js';
+
+const currentUser = authService.getCurrentUser();
+const isSuperAdmin = currentUser && (currentUser.rol === 'SUPERADMIN' || currentUser.id === 1);
+
+// Ocultar pestaña de Administradores a clientes normales
+const userTab = document.querySelector('[data-catalog="users"]');
+if (userTab && !isSuperAdmin) {
+  userTab.remove();
+}
 
 const tabs = [...document.querySelectorAll('[data-catalog]')];
 const form = document.querySelector('#catalog-form');
