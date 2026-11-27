@@ -42,6 +42,18 @@ Antes de inicializar una base nueva, configura `FARMA_USERNAME`, `FARMA_NAME` y 
 
 GitHub Pages solo publica frontend estático: no puede ejecutar este servidor ni acceder a SQLite. Para producción, despliega el backend y la base en un servidor privado y configura el frontend para esa API.
 
+## Base SQLite de demostración
+
+El repositorio incluye [`demo/geds-demo.sqlite`](demo/geds-demo.sqlite), una base descargable con un esquema compatible y registros inventados para revisar tablas, relaciones, productos y movimientos. No contiene información de FARMACIA TEC ni datos de clientes reales. La cuenta incluida es `demo_admin` y su contraseña de prueba es `DemoGeds2026!`; úsala únicamente con esta base de demostración.
+
+Puedes abrir el archivo directamente con [DB Browser for SQLite](https://sqlitebrowser.org/) o consultar la base desde PowerShell con `node` y el módulo `node:sqlite`. Para regenerarla desde los datos de ejemplo versionados, ejecuta:
+
+```bash
+node scripts/create-demo-database.js
+```
+
+El servidor local sigue usando `server/geds.sqlite`; nunca lee ni modifica la base de demostración. GitHub Pages tampoco ejecuta SQLite: su modo de portafolio usa datos ficticios en el navegador.
+
 ## Estructura del proyecto
 
 ```text
