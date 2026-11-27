@@ -50,6 +50,11 @@ export function showEmptyState(host, title, message, icon = '⌕') {
 }
 
 function initAbcChatbot() {
+  const path = (window.location.pathname || '').toLowerCase();
+  const href = (window.location.href || '').toLowerCase();
+  if (path.endsWith('login.html') || path.endsWith('/login') || href.includes('login.html')) {
+    return;
+  }
   if (document.querySelector('script[src*="widget.js"]') || document.querySelector('abc-chat-widget')) return;
   const script = document.createElement('script');
   script.src = 'https://abc-chatbot-two.vercel.app/widget.js';
