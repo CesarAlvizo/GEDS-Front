@@ -1,5 +1,4 @@
 import { CONFIG } from '../config.js';
-import { storageAdapter } from '../data/localStorageAdapter.js';
 import { apiClient } from './apiClient.js';
 
 class ProductService {
@@ -9,13 +8,9 @@ class ProductService {
   }
 
   async getProducts(filters = {}) {
-    let list = [];
-
-    if (CONFIG.USE_MOCK) {
-      list = storageAdapter.getProducts();
-    } else {
-      list = await apiClient.get(CONFIG.ENDPOINTS.PRODUCTS.BASE);
-    }
+    const list = CONFIG.PUBLIC_DEMO
+      ? await (await import('../data/publicDemoStore.js')).demoStore.getProducts()
+      : await apiClient.get('/productos');
 
     const { query = '', category = '', onlyLowStock = false } = filters;
     const q = query.trim().toLowerCase();
@@ -29,11 +24,8 @@ class ProductService {
   }
 
   async getProductById(id) {
-    if (CONFIG.USE_MOCK) {
-      return storageAdapter.getProductById(id);
-    } else {
-      return await apiClient.get(CONFIG.ENDPOINTS.PRODUCTS.DETAIL(id));
-    }
+    if (CONFIG.PUBLIC_DEMO) return (await import('../data/publicDemoStore.js')).demoStore.getProductById(id);
+    return await apiClient.get(`/productos/${encodeURIComponent(id)}`);
   }
 
   async saveProduct(productData) {
@@ -45,23 +37,14 @@ class ProductService {
       min: Number(productData.min) || 0
     };
 
-    if (CONFIG.USE_MOCK) {
-      return storageAdapter.saveProduct(payload);
-    } else {
-      if (payload.id) {
-        return await apiClient.put(CONFIG.ENDPOINTS.PRODUCTS.DETAIL(payload.id), payload);
-      } else {
-        return await apiClient.post(CONFIG.ENDPOINTS.PRODUCTS.BASE, payload);
-      }
-    }
+    if (CONFIG.PUBLIC_DEMO) return (await import('../data/publicDemoStore.js')).demoStore.saveProduct(payload);
+    if (payload.id) return await apiClient.put(`/productos/${encodeURIComponent(payload.id)}`, payload);
+    return await apiClient.post('/productos', payload);
   }
 
   async deactivateProduct(id) {
-    if (CONFIG.USE_MOCK) {
-      return storageAdapter.deactivateProduct(id);
-    } else {
-      return await apiClient.put(CONFIG.ENDPOINTS.PRODUCTS.DEACTIVATE(id), {});
-    }
+    if (CONFIG.PUBLIC_DEMO) return (await import('../data/publicDemoStore.js')).demoStore.deactivateProduct(id);
+    return await apiClient.put(`/productos/${encodeURIComponent(id)}/desactivar`, {});
   }
 }
 

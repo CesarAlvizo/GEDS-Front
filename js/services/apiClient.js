@@ -5,21 +5,12 @@ class ApiClient {
     this.baseUrl = CONFIG.API_BASE_URL;
   }
 
-  getToken() {
-    return localStorage.getItem(CONFIG.STORAGE_KEYS.TOKEN);
-  }
-
   getHeaders(customHeaders = {}) {
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...customHeaders
     };
-
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     return headers;
   }
@@ -28,6 +19,7 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     const config = {
       ...options,
+      credentials: 'same-origin',
       headers: this.getHeaders(options.headers)
     };
 
@@ -38,8 +30,7 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
       if (response.status === 401) {
-        localStorage.removeItem(CONFIG.STORAGE_KEYS.SESSION);
-        localStorage.removeItem(CONFIG.STORAGE_KEYS.TOKEN);
+        sessionStorage.removeItem(CONFIG.STORAGE_KEYS.SESSION);
         window.location.assign('/login.html');
         throw new Error('Sesión expirada o no autorizada');
       }

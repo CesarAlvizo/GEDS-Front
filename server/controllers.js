@@ -1,6 +1,6 @@
-// server/controllers.js - Controladores que orquestan modelos y validaciones
 import { UserModel, ProductModel, MovementModel, CatalogModel, StoredProcedures } from './models.js';
 import { Validators, ValidationError } from './validators.js';
+import { createSession, expiredSessionCookie, readSessionCookie, revokeSession, sessionCookie } from './sessions.js';
 
 export const AuthController = {
   async login(req, res, body, sendJson) {
@@ -11,66 +11,20 @@ export const AuthController = {
       return sendJson(res, 401, { message: 'Credenciales inválidas' });
     }
 
-    // Token simulado con ID de usuario embebido para control multi-inquilino seguro
-    const token = `token-jwt-${user.id}-${Date.now()}`;
+    const token = createSession(user.id);
     return sendJson(res, 200, {
-      token,
       user: {
         id: user.id,
-        username: user.username,
-        nombre: user.nombre,
         rol: user.rol
       }
-    });
+    }, { 'Set-Cookie': sessionCookie(token, Boolean(req.socket?.encrypted)) });
   },
 
   async logout(req, res, sendJson) {
-    return sendJson(res, 200, { message: 'Sesión finalizada' });
-  }
-};
-
-export const UserController = {
-  async getAll(req, res, sendJson) {
-    const users = UserModel.getAll();
-    const stats = UserModel.getSystemStats();
-    return sendJson(res, 200, { users, stats });
-  },
-
-  async toggleStatus(req, res, idParam, sendJson) {
-    const id = Validators.validateId(idParam);
-    const updated = UserModel.toggleActivo(id);
-    return sendJson(res, 200, updated);
-  },
-
-  async create(req, res, body, sendJson) {
-    const username = Validators.sanitizeString(body.username);
-    const password = Validators.sanitizeString(body.password);
-    const nombre = Validators.sanitizeString(body.nombre);
-
-    if (!username || username.length < 3) {
-      throw new ValidationError('El nombre de usuario debe contener al menos 3 caracteres alfanuméricos.');
-    }
-    Validators.assertSafeText(username, 'usuario', true);
-
-    if (!password || password.length < 4) {
-      throw new ValidationError('La contraseña debe contener al menos 4 caracteres.');
-    }
-    if (Validators.hasSqlInjectionPattern(password)) {
-      throw new ValidationError('Contraseña no permitida');
-    }
-
-    if (nombre) {
-      Validators.assertSafeText(nombre, 'nombre');
-    }
-
-    const newUser = UserModel.create({ username, password, nombre: nombre || username });
-    return sendJson(res, 201, newUser);
-  },
-
-  async delete(req, res, idParam, sendJson) {
-    const id = Validators.validateId(idParam);
-    UserModel.delete(id);
-    return sendJson(res, 200, { message: 'Usuario cliente eliminado' });
+    revokeSession(readSessionCookie(req));
+    return sendJson(res, 200, { message: 'Sesión finalizada' }, {
+      'Set-Cookie': expiredSessionCookie(Boolean(req.socket?.encrypted))
+    });
   }
 };
 
@@ -107,7 +61,6 @@ export const ProductController = {
     }
 
     const validated = Validators.validateProduct(body, true);
-    // Verificar código duplicado en otro producto
     const codeCheck = ProductModel.getByCodigo(validated.codigo);
     if (codeCheck && codeCheck.id !== id) {
       return sendJson(res, 400, { message: `El código ${validated.codigo} ya está en uso por otro producto` });

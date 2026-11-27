@@ -71,7 +71,7 @@
       </header>
       <main class="view enter">
         <h1>Reportes</h1>
-        <p class="sub">Filtra los movimientos y exporta los resultados a formato CSV/Excel</p>
+        <p class="sub">Filtra los movimientos y descarga un CSV sencillo o un libro de Excel con formato y resumen.</p>
         <section class="card">
           <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
             <div class="field">
@@ -110,7 +110,13 @@
           <span class="chip mute" id="report-total">0 registros</span>
           <span class="sp">
           </span>
-          <button class="btn primary" id="report-export">Exportar CSV</button>
+          <div class="report-export-actions">
+            <button class="btn" id="report-export-csv" type="button" title="Descargar datos tabulares en formato CSV">CSV</button>
+            <button class="btn primary" id="report-export-xlsx" type="button" title="Descargar reporte de Excel con formato">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+              Excel (.xlsx)
+            </button>
+          </div>
         </div>
         <section class="card tw" id="report-table">
         </section>

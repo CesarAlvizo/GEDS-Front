@@ -1,5 +1,3 @@
-// server/validators.js - Validaciones estrictas y sanitización contra inyecciones
-
 export class ValidationError extends Error {
   constructor(message, errors = {}) {
     super(message);
@@ -9,32 +7,25 @@ export class ValidationError extends Error {
   }
 }
 
-// Patrones sospechosos de SQL Injection comunes
+// Secuencias rechazadas.
 const SQLI_REGEX = /('|"|;|--|\/\*|\*\/|xp_|union\s+select|insert\s+into|drop\s+table|exec\(|benchmark\(|sleep\()/i;
 
-// Regex para caracteres seguros: alfanuméricos, acentos, espacios y signos básicos de puntuación
-// Alfanumérico estricto para códigos/identificadores: letras, números, guiones y puntos
+// Caracteres permitidos en códigos.
 const ALPHANUMERIC_CODE_REGEX = /^[a-zA-Z0-9_\-\.]+$/;
 
-// Texto alfanumérico seguro para nombres, descripciones y textos:
-// Permite letras (incluye acentos españoles áéíóúñÁÉÍÓÚÑ), números, espacios, puntos, comas y guiones.
-// Bloquea explícitamente comillas (' "), punto y coma (;), barras (\ /), comentarios (-- /*), operadores SQL.
 const SAFE_ALPHANUMERIC_TEXT_REGEX = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-_.,#()]+$/;
 
 export const Validators = {
-  // Limpia y normaliza texto eliminando caracteres de control nulos
   sanitizeString(val) {
     if (val === null || val === undefined) return '';
     return String(val).replace(/\0/g, '').trim();
   },
 
-  // Valida si un texto contiene patrones de inyección explícita
   hasSqlInjectionPattern(val) {
     if (!val || typeof val !== 'string') return false;
     return SQLI_REGEX.test(val);
   },
 
-  // Valida que el texto sea seguro y contenga solo caracteres alfanuméricos permitidos
   assertSafeText(val, fieldName, isStrictCode = false) {
     if (!val) return;
     if (this.hasSqlInjectionPattern(val)) {
@@ -64,10 +55,8 @@ export const Validators = {
       throw new ValidationError('El nombre de usuario no puede exceder 50 caracteres');
     }
 
-    // Validación alfanumérica estricta en el usuario
     this.assertSafeText(username, 'usuario', true);
 
-    // Si la contraseña tiene patrones SQLi explícitos, se rechaza
     if (this.hasSqlInjectionPattern(password)) {
       throw new ValidationError('Contraseña con caracteres o comandos no permitidos');
     }

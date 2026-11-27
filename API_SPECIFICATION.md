@@ -7,16 +7,13 @@ Este documento detalla el contrato de comunicación, modelos de datos, endpoints
 ## 1. Arquitectura General y Autenticación
 
 - **Formato:** JSON (`application/json; charset=utf-8`).
-- **Autenticación:** Tokens Bearer (JWT) enviados en la cabecera HTTP:
-  ```http
-  Authorization: Bearer <TOKEN_JWT>
-  ```
+- **Autenticación:** Cookie de sesión opaca, marcada `HttpOnly` y `SameSite=Strict`. El navegador la envía automáticamente en solicitudes del mismo origen; no se expone a JavaScript ni se guarda en `localStorage`.
 - **Códigos de Estado HTTP Estándar:**
   - `200 OK`: Petición exitosa con datos de respuesta.
   - `201 Created`: Recurso creado exitosamente.
   - `204 No Content`: Eliminación exitosa sin cuerpo de retorno.
   - `400 Bad Request`: Error de validación en los datos enviados.
-  - `401 Unauthorized`: Token faltante, inválido o credenciales erróneas.
+  - `401 Unauthorized`: Sesión faltante, inválida o credenciales erróneas.
   - `404 Not Found`: Recurso no encontrado.
   - `500 Internal Server Error`: Excepción no controlada en el servidor.
 
@@ -102,20 +99,21 @@ CREATE TABLE movimientos (
 - **Request Body:**
   ```json
   {
-    "username": "admin",
-    "password": "admin"
+  "username": "usuario_configurado",
+  "password": "contraseña_ingresada"
   }
   ```
 - **Response `200 OK`:**
   ```json
+  Response header: `Set-Cookie: geds_session=...; HttpOnly; SameSite=Strict; Path=/`
+
+  ```json
   {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": 1,
-      "username": "admin",
-      "nombre": "Administrador General",
-      "rol": "ADMIN",
-      "avatar": "AD"
+      "username": "usuario_configurado",
+      "nombre": "Almacén configurado",
+      "rol": "ADMIN"
     }
   }
   ```
@@ -127,7 +125,7 @@ CREATE TABLE movimientos (
   ```
 
 #### `POST /api/auth/logout`
-- **Descripción:** Invalida el token o registra el cierre de sesión.
+- **Descripción:** Invalida la sesión actual y expira la cookie.
 - **Response `200 OK`:**
   ```json
   {
@@ -291,15 +289,14 @@ Donde `:name` puede ser `providers`, `clients`, `categories` o `units`.
 
 ## 4. Activación de la Conexión en el Frontend
 
-Una vez desplegado tu backend, para que el frontend se comunique con él:
-1. Abre el archivo `js/config.js`.
-2. Modifica:
+El servidor local sirve frontend y API en el mismo origen. La configuración usa `/api`; no se debe incrustar una contraseña ni una URL secreta en el frontend.
+
+Para desplegar la aplicación en internet, aloja el backend y SQLite en un servidor privado. GitHub Pages solo entrega archivos estáticos y no puede ejecutar este servidor. Configura el origen de la API pública y una lista CORS restringida para ese despliegue:
+
    ```javascript
    export const CONFIG = {
      // ...
-     USE_MOCK: false, // <-- Cambiar a false
-     API_BASE_URL: 'http://localhost:3000/api', // <-- URL de tu backend
+     API_BASE_URL: '/api',
      // ...
    };
    ```
-3. ¡Listo! Todo el frontend realizará llamadas HTTP `fetch` reales al backend mediante `apiClient.js`.

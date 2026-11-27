@@ -1,17 +1,18 @@
-// Run synchronously in each protected page's <head> to prevent content
-// from appearing before the client-side session check completes.
+// Redirige antes de mostrar contenido privado.
 try {
-  const session = JSON.parse(localStorage.getItem('geds_session') || 'null');
+  const migrationKey = 'geds_secure_backend_v1';
+  if (!localStorage.getItem(migrationKey)) {
+    [
+      'geds_products', 'geds_movements', 'geds_categories', 'geds_units',
+      'geds_providers', 'geds_clients', 'geds_users', 'geds_token',
+      'geds_session', 'geds_initialized_v3'
+    ].forEach(key => localStorage.removeItem(key));
+    sessionStorage.removeItem('geds_session');
+    localStorage.setItem(migrationKey, 'true');
+  }
+  const session = JSON.parse(sessionStorage.getItem('geds_session') || 'null');
   if (!session) {
     window.location.replace('login.html');
-  } else {
-    const isSuperAdmin = (session.rol === 'SUPERADMIN' || session.id === 1);
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-
-    // Si un cliente intenta entrar a la consola de SuperAdmin, lo regresamos al dashboard
-    if (currentPage === 'admin-tenants.html' && !isSuperAdmin) {
-      window.location.replace('dashboard.html');
-    }
   }
 } catch {
   window.location.replace('login.html');

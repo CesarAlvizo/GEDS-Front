@@ -18,11 +18,11 @@ Aplicación web para la administración de inventario de un almacén. GEDS reún
 - CSS3 y Bootstrap 5.3.3.
 - JavaScript vanilla con módulos ES.
 - Node.js para el servidor local de archivos y la API de desarrollo.
-- Almacenamiento local del navegador para el modo de demostración.
+- SQLite en el servidor local; GitHub Pages ofrece una demostración aislada con datos ficticios guardados en el navegador.
 
 ## Requisitos
 
-- Node.js 18 o posterior.
+- Node.js 22 o posterior (el proyecto usa `node:sqlite`).
 
 ## Ejecución
 
@@ -30,17 +30,17 @@ Aplicación web para la administración de inventario de un almacén. GEDS reún
 npm start
 ```
 
-La aplicación queda disponible en `http://localhost:3000`. Las páginas estáticas también pueden servirse con un servidor de desarrollo local. El servidor Node incluido proporciona la API de desarrollo.
+La aplicación queda disponible en `http://localhost:3000`. Inicia sesión desde esa dirección para que el navegador use la API del mismo servidor. SQLite crea o migra `server/geds.sqlite` en la primera petición autenticada. Este modo local no carga el módulo de datos de demostración.
 
-## Modo de demostración
+Al publicar en el dominio predeterminado `*.github.io`, la aplicación activa automáticamente un modo de portafolio: permite explorar y modificar datos inventados, guardados solo en el almacenamiento de ese navegador. No usa ni solicita acceso a SQLite, credenciales o registros locales. El inicio de sesión de demostración no es autenticación real.
 
-La configuración predeterminada activa `USE_MOCK` en `js/config.js`. En este modo, la aplicación utiliza datos de ejemplo y los guarda en el almacenamiento local del navegador. Las credenciales de demostración son:
+## Inicialización local
 
-| Usuario | Contraseña |
-| --- | --- |
-| `admin` | `admin` |
+La base local se provisiona con un usuario y un catálogo de farmacia almacenado fuera del código público, en `server/private/`. Esa carpeta y el archivo SQLite están excluidos de Git y el servidor no los publica como archivos estáticos.
 
-El almacenamiento local es propio de cada navegador y no sincroniza información entre usuarios o dispositivos.
+Antes de inicializar una base nueva, configura `FARMA_USERNAME`, `FARMA_NAME` y `FARMA_INITIAL_PASSWORD` en el entorno de Node. Puedes partir de `.env.example`; `.env` está excluido de Git y bloqueado por el servidor estático. La contraseña se almacena en SQLite usando scrypt y nunca se devuelve por la API. Después de iniciar la base, elimina la variable de contraseña del entorno.
+
+GitHub Pages solo publica frontend estático: no puede ejecutar este servidor ni acceder a SQLite. Para producción, despliega el backend y la base en un servidor privado y configura el frontend para esa API.
 
 ## Estructura del proyecto
 
@@ -49,7 +49,7 @@ El almacenamiento local es propio de cada navegador y no sincroniza información
 ├── css/                Estilos globales, componentes y vistas
 ├── js/
 │   ├── components/     Componentes de interfaz reutilizables
-│   ├── data/           Datos iniciales y adaptador de almacenamiento local
+│   ├── data/           Adaptador de sesión local
 │   ├── pages/          Lógica de cada pantalla
 │   ├── services/       Servicios de autenticación e inventario
 │   └── utils/          Formateo, exportación y utilidades DOM
@@ -66,7 +66,7 @@ El almacenamiento local es propio de cada navegador y no sincroniza información
 
 ## Configuración de API
 
-La configuración de la aplicación se encuentra en `js/config.js`. Para utilizar la API de desarrollo en lugar del modo de demostración, se puede desactivar `USE_MOCK` y configurar `API_BASE_URL` con la dirección correspondiente. La especificación de endpoints está documentada en [API_SPECIFICATION.md](API_SPECIFICATION.md).
+La configuración de la API está en `js/config.js` y usa `/api` en el mismo origen. Las sesiones viajan en una cookie `HttpOnly`; no se almacenan tokens Bearer en `localStorage`. La especificación está en [API_SPECIFICATION.md](API_SPECIFICATION.md).
 
 ## Créditos
 

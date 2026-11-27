@@ -1,6 +1,5 @@
 import { productService } from '../services/productService.js';
 import { movementService } from '../services/movementService.js';
-import { storageAdapter } from '../data/localStorageAdapter.js';
 import { notify, addOption, makeCell, showEmptyState } from './common.js';
 import { InputSecurity } from '../utils/validators.js';
 
@@ -30,7 +29,7 @@ async function renderHistory() {
   const allProducts = await productService.getProducts();
   const productMap = new Map(allProducts.map(p => [Number(p.id), p]));
   movements.forEach(movement => {
-    const product = productMap.get(Number(movement.pid)) || storageAdapter.getProductById(movement.pid);
+    const product = productMap.get(Number(movement.pid));
     const row = body.insertRow();
     makeCell(row, movement.fecha);
     makeCell(row, product?.nombre || 'Producto eliminado');

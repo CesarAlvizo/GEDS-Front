@@ -1,22 +1,16 @@
-// js/utils/validators.js - Validaciones del lado del cliente y detección de inyecciones
-
 export const InputSecurity = {
-  // Patrones sospechosos de inyección SQL
   SQL_INJECTION_PATTERN: /('|"|;|--|\/\*|\*\/|union\s+select|insert\s+into|drop\s+table|exec\(|benchmark\(|sleep\()/i,
 
-  // Sanitiza texto eliminando caracteres nulos y espacios extremos
   sanitize(value) {
     if (value === null || value === undefined) return '';
     return String(value).replace(/\0/g, '').trim();
   },
 
-  // Retorna true si el texto presenta patrones de inyección SQL comunes
   isSuspiciousSql(value) {
     if (!value || typeof value !== 'string') return false;
     return this.SQL_INJECTION_PATTERN.test(value);
   },
 
-  // Validador de formularios
   validateField(inputElement, options = {}) {
     const rawValue = inputElement.value ?? '';
     const cleanValue = this.sanitize(rawValue);

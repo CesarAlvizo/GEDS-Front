@@ -1,5 +1,3 @@
-// test/security-test.js
-// Suite de pruebas de seguridad y penetración contra SQL Injection
 import { UserModel, ProductModel, MovementModel, CatalogModel } from '../server/models.js';
 import { Validators, ValidationError } from '../server/validators.js';
 
@@ -20,7 +18,7 @@ function assert(description, condition) {
   }
 }
 
-// 1. PRUEBAS DE AUTENTICACIÓN
+// Autenticación
 console.log('--- 1. Pruebas en Autenticación (Login) ---');
 const maliciousLogins = [
   "' OR '1'='1",
@@ -32,7 +30,7 @@ const maliciousLogins = [
 ];
 
 for (const payload of maliciousLogins) {
-  // Ahora el validador del backend debe rechazar antes el intento si no es alfanumérico seguro
+  // Rechazo del validador
   let rejected = false;
   try {
     Validators.validateLogin({ username: payload, password: 'password' });
@@ -41,16 +39,12 @@ for (const payload of maliciousLogins) {
   }
   assert(`Validación estricta alfanumérica rechaza usuario sospechoso: "${payload}"`, rejected);
 
-  // Y a nivel de modelo de BD sigue dando null
+  // Rechazo del modelo
   const result = UserModel.findByCredentials(payload, payload);
   assert(`Consulta en BD neutraliza inyección: "${payload}"`, result === null);
 }
 
-// Comprobar que credencial legítima sigue funcionando
-const validUser = UserModel.findByCredentials('admin', 'admin');
-assert('Credencial legítima admin:admin autentica correctamente', validUser !== null && validUser.username === 'admin');
-
-// 2. PRUEBAS EN PRODUCTOS
+// Productos
 console.log('\n--- 2. Pruebas en Búsqueda y Modelos de Productos ---');
 const maliciousProductCodes = [
   "PAP-001' OR '1'='1",
@@ -59,7 +53,7 @@ const maliciousProductCodes = [
 ];
 
 for (const payload of maliciousProductCodes) {
-  // Validación estricta en backend debe rechazarlo
+  // Validación de producto
   let rejected = false;
   try {
     Validators.assertSafeText(payload, 'código', true);
@@ -72,7 +66,7 @@ for (const payload of maliciousProductCodes) {
   assert(`Búsqueda en BD por código inmune a: "${payload}"`, prod === null);
 }
 
-// Búsqueda por ID con SQL Injection
+// Búsqueda por ID
 const maliciousIds = [
   "1 OR 1=1",
   "1; DROP TABLE productos;",
@@ -90,7 +84,7 @@ for (const badId of maliciousIds) {
   assert(`Validación de ID rechaza payload no numérico: "${badId}"`, threw);
 }
 
-// 3. PRUEBAS EN CATÁLOGOS (Whitelisting de tablas y datos)
+// Catálogos
 console.log('\n--- 3. Pruebas en Catálogos (Protección de nombres de tabla) ---');
 const maliciousCatalogs = [
   "usuarios",
@@ -110,11 +104,11 @@ for (const badCat of maliciousCatalogs) {
   assert(`Nombre de catálogo malicioso o no autorizado rechazado: "${badCat}"`, threw);
 }
 
-// Catálogos legítimos funcionan
+// Catálogos válidos
 const validCat = CatalogModel.getAll('categories');
 assert('Catálogo legítimo "categories" devuelve resultados esperados', Array.isArray(validCat) && validCat.length > 0);
 
-// 4. PRUEBA DE INYECCIÓN EN CREACIÓN DE PRODUCTOS
+// Alta de productos
 console.log('\n--- 4. Pruebas de Validación Alfanumérica en Creación de Productos ---');
 const maliciousProductData = {
   codigo: "SEC-TEST'; DROP TABLE productos; --",
@@ -132,7 +126,7 @@ try {
 }
 assert('El backend rechaza el producto por contener caracteres sospechosos de SQLi en código', productValidationRejected);
 
-// Producto legítimo con caracteres válidos
+// Producto válido
 const validProductData = {
   codigo: "PROD-" + Date.now(),
   nombre: "Paquete de Hojas Carta",
@@ -147,11 +141,11 @@ const validProductData = {
 const newProduct = ProductModel.create(validProductData);
 assert('Producto legítimo se crea correctamente', newProduct && newProduct.id > 0);
 
-// Comprobar que la tabla productos permanece íntegra
+// Integridad de productos
 const allProds = ProductModel.getAll();
 assert('La tabla productos permanece íntegra', allProds.length >= 8);
 
-// 5. PRUEBAS EN FILTROS Y REGISTRO DE MOVIMIENTOS
+// Filtros y movimientos
 console.log('\n--- 5. Pruebas en Filtros y Registro de Movimientos ---');
 const maliciousMovements = MovementModel.getAll({
   fromDate: "2026-01-01' OR '1'='1",
@@ -159,7 +153,7 @@ const maliciousMovements = MovementModel.getAll({
 });
 assert('Filtros de movimientos con inyección SQL tratados como parámetros literales seguros', Array.isArray(maliciousMovements));
 
-// 6. RESULTADOS FINALES
+// Resultados
 console.log('\n====================================================');
 console.log(` RESULTADOS: ${passedTests} de ${totalTests} pruebas superadas.`);
 if (passedTests === totalTests) {

@@ -20,7 +20,7 @@
   will-change: width, transform;
 }
 
-/* Bootstrap's .nav defaults to a horizontal flex row; the app sidebar is vertical. */
+/* Mantiene vertical el menú lateral. */
 .side > .nav {
   display: flex;
   flex-direction: column;
@@ -420,7 +420,6 @@
   outline-offset: 2px;
 }
 
-/* Sidebar User Profile Section */
 .side-footer {
   margin-top: auto;
   padding-top: 14px;
@@ -453,19 +452,6 @@
   font-weight: 700;
   font-size: 13px;
   letter-spacing: .5px;
-}
-
-.side-user-avatar.superadmin-avatar {
-  border-radius: 11px;
-  color: #fff;
-  background: linear-gradient(145deg, #7257d8, #403090);
-  box-shadow: 0 3px 10px rgb(64 48 144 / 24%);
-}
-
-.side-user-avatar.superadmin-avatar svg {
-  width: 21px;
-  height: 21px;
-  fill: currentColor;
 }
 
 .side-user-info {
@@ -527,7 +513,6 @@
   outline-offset: 2px;
 }
 
-/* Collapsed sidebar adaptations */
 .side.collapsed .side-footer {
   padding-top: 10px;
 }

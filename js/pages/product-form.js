@@ -21,7 +21,6 @@ form.addEventListener('submit', async event => {
   const values = Object.fromEntries(new FormData(form));
   let valid = true;
 
-  // Validaciones de seguridad y requerimiento
   const fieldRules = {
     codigo: { required: true, maxLength: 50 },
     nombre: { required: true, maxLength: 150 },

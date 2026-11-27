@@ -1,14 +1,13 @@
-import { CONFIG } from '../config.js';
-import { storageAdapter } from '../data/localStorageAdapter.js';
 import { productService } from './productService.js';
 import { apiClient } from './apiClient.js';
+import { CONFIG } from '../config.js';
 
 class MovementService {
   async getMovements(filters = {}) {
     const [list, products] = await Promise.all([
-      CONFIG.USE_MOCK
-        ? Promise.resolve(storageAdapter.getMovements())
-        : apiClient.get(CONFIG.ENDPOINTS.MOVEMENTS.BASE),
+      CONFIG.PUBLIC_DEMO
+        ? (await import('../data/publicDemoStore.js')).demoStore.getMovements()
+        : apiClient.get('/movimientos'),
       productService.getProducts()
     ]);
     const productsById = new Map(products.map(product => [String(product.id), product]));
@@ -33,11 +32,8 @@ class MovementService {
   }
 
   async createMovement(movementData) {
-    if (CONFIG.USE_MOCK) {
-      return storageAdapter.createMovement(movementData);
-    } else {
-      return await apiClient.post(CONFIG.ENDPOINTS.MOVEMENTS.BASE, movementData);
-    }
+    if (CONFIG.PUBLIC_DEMO) return (await import('../data/publicDemoStore.js')).demoStore.createMovement(movementData);
+    return await apiClient.post('/movimientos', movementData);
   }
 
   async getDashboardMetrics() {

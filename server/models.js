@@ -1,17 +1,18 @@
-// server/models.js - Modelos con consultas preparadas y parámetros vinculados (Protección SQL Injection)
 import { getDatabase } from './db.js';
+import { verifyPassword } from './passwords.js';
 
 export const UserModel = {
   findByCredentials(username, password) {
     const db = getDatabase();
-    // Consulta preparada con parámetros vinculados obligatorios: previene SQL Injection
-    const stmt = db.prepare(`
-      SELECT id, username, nombre, rol, activo
+    const user = db.prepare(`
+      SELECT id, username, nombre, rol, activo, password_hash
       FROM usuarios
-      WHERE username = ? AND password_hash = ? AND activo = 1
-    `);
-    const user = stmt.get(String(username), String(password));
-    return user || null;
+      WHERE username = ? AND activo = 1
+      LIMIT 1
+    `).get(String(username));
+    if (!user || !verifyPassword(password, user.password_hash)) return null;
+    const { password_hash, ...safeUser } = user;
+    return safeUser;
   },
 
   findById(id) {
@@ -25,74 +26,6 @@ export const UserModel = {
     return user || null;
   },
 
-  getAll() {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT 
-        u.id, 
-        u.username, 
-        u.nombre, 
-        u.rol, 
-        u.activo, 
-        u.created_at,
-        COUNT(DISTINCT p.id) as total_productos,
-        COUNT(DISTINCT m.id) as total_movimientos
-      FROM usuarios u
-      LEFT JOIN productos p ON p.usuario_id = u.id AND p.activo = 1
-      LEFT JOIN movimientos m ON m.usuario_id = u.id
-      GROUP BY u.id
-      ORDER BY u.id ASC
-    `);
-    return stmt.all();
-  },
-
-  toggleActivo(id) {
-    const db = getDatabase();
-    if (Number(id) === 1) {
-      throw new Error('No se puede desactivar el usuario administrador principal.');
-    }
-    const user = this.findById(id);
-    if (!user) throw new Error('Usuario no encontrado');
-    const nuevoEstado = user.activo === 1 ? 0 : 1;
-    db.prepare('UPDATE usuarios SET activo = ? WHERE id = ?').run(nuevoEstado, Number(id));
-    return this.findById(id);
-  },
-
-  getSystemStats() {
-    const db = getDatabase();
-    const totalTenants = db.prepare("SELECT COUNT(*) as count FROM usuarios WHERE id != 1").get().count;
-    const activeTenants = db.prepare("SELECT COUNT(*) as count FROM usuarios WHERE id != 1 AND activo = 1").get().count;
-    const totalProducts = db.prepare("SELECT COUNT(*) as count FROM productos WHERE activo = 1").get().count;
-    const totalMovements = db.prepare("SELECT COUNT(*) as count FROM movimientos").get().count;
-    return { totalTenants, activeTenants, totalProducts, totalMovements };
-  },
-
-  create(userData) {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO usuarios (username, password_hash, nombre, rol, activo)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    const res = stmt.run(
-      String(userData.username).trim(),
-      String(userData.password || 'admin123').trim(),
-      String(userData.nombre || userData.username).trim(),
-      'ADMIN',
-      1
-    );
-    return this.findById(res.lastInsertRowid);
-  },
-
-  delete(id) {
-    const db = getDatabase();
-    // Evitar borrar el usuario 1 principal
-    if (Number(id) === 1) {
-      throw new Error('No se puede eliminar el usuario administrador principal.');
-    }
-    const stmt = db.prepare('DELETE FROM usuarios WHERE id = ?');
-    stmt.run(Number(id));
-    return true;
-  }
 };
 
 export const ProductModel = {
@@ -250,7 +183,7 @@ export const MovementModel = {
 };
 
 export const CatalogModel = {
-  // Manejo de catalogos mapeados de forma segura (whitelist)
+  // Lista blanca de catálogos.
   VALID_CATALOGS: {
     categories: { table: 'categorias', isComplex: false },
     units: { table: 'unidades_medida', isComplex: false },
@@ -263,7 +196,6 @@ export const CatalogModel = {
     if (!meta) return null;
 
     const db = getDatabase();
-    // meta.table viene de lista blanca estricta (no ingresada directamente por el usuario)
     const stmt = db.prepare(`SELECT * FROM ${meta.table} ORDER BY id ASC`);
     const rows = stmt.all();
 
@@ -299,18 +231,15 @@ export const CatalogModel = {
     const db = getDatabase();
     const items = this.getAll(catalogName);
     
-    // Si indexOrId es el index posicional o el ID
     const num = Number(indexOrId);
     let targetId = null;
 
     if (!meta.isComplex) {
-      // En lista simple de strings, indexOrId suele ser el índice en el array
       const rawRows = db.prepare(`SELECT id FROM ${meta.table} ORDER BY id ASC`).all();
       if (rawRows[num]) {
         targetId = rawRows[num].id;
       }
     } else {
-      // En objetos, verificar si coincide con index o id
       const rawRows = db.prepare(`SELECT id FROM ${meta.table} ORDER BY id ASC`).all();
       if (rawRows[num]) {
         targetId = rawRows[num].id;
@@ -328,23 +257,11 @@ export const CatalogModel = {
   }
 };
 
-/**
- * Procedimientos Almacenados (Stored Procedures) y Operaciones Transaccionales
- * Encapsulan lógica crítica en transacciones atómicas con validación y protección a nivel de BD.
- */
 export const StoredProcedures = {
-  /**
-   * Procedimiento: sp_registrar_movimiento_inventario
-   * Ejecuta en una sola transacción atómica:
-   * 1. Verificación del producto
-   * 2. Comprobación de stock en caso de salida
-   * 3. Inserción de movimiento (activa el trigger trg_actualiza_stock_movimiento)
-   * 4. Retorno del estado final
-   */
+  // El trigger sincroniza el stock.
   sp_registrar_movimiento_inventario(movementData) {
     const db = getDatabase();
     
-    // Iniciar transacción atómica (BEGIN TRANSACTION / COMMIT / ROLLBACK)
     db.exec('BEGIN TRANSACTION;');
     try {
       const prodStmt = db.prepare('SELECT id, stock, unidad, activo FROM productos WHERE id = ?');
@@ -367,8 +284,6 @@ export const StoredProcedures = {
         throw new Error(`Procedimiento Almacenado: Stock insuficiente. Disponible: ${prod.stock} ${prod.unidad}`);
       }
 
-      // Inserción del movimiento. 
-      // El TRIGGER trg_actualiza_stock_movimiento actualizará automáticamente el stock en la tabla productos
       const insertStmt = db.prepare(`
         INSERT INTO movimientos (usuario_id, fecha, pid, tipo, cant, motivo, obs)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -394,10 +309,6 @@ export const StoredProcedures = {
     }
   },
 
-  /**
-   * Procedimiento: sp_crear_producto_seguro
-   * Inserta un producto con validación de código único y verificación de integridad
-   */
   sp_crear_producto_seguro(productData) {
     const db = getDatabase();
     db.exec('BEGIN TRANSACTION;');

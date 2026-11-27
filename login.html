@@ -309,7 +309,7 @@ c0 85 -56 176 -123 201 -41 16 -127 13 -162 -5z" />
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                 <circle cx="12" cy="7" r="4" />
                             </svg><input class="in form-control" id="username" type="text" autocomplete="username"
-                                placeholder="admin" value="admin" maxlength="50" pattern="[a-zA-Z0-9_\-\.]{3,50}"
+                                placeholder="Usuario de acceso" maxlength="50" pattern="[a-zA-Z0-9_\-\.]{3,50}"
                                 title="Solo letras, números, puntos, guiones y entre 3 y 50 caracteres" required></div>
                     </div>
                     <div class="field mb-3">
@@ -318,7 +318,7 @@ c0 85 -56 176 -123 201 -41 16 -127 13 -162 -5z" />
                                 <rect x="3" y="11" width="18" height="11" rx="2" />
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                             </svg><input class="in form-control" id="password" type="password"
-                                autocomplete="current-password" placeholder="••••••••" value="admin" maxlength="100" required><button
+                                autocomplete="current-password" placeholder="Ingresa tu contraseña" maxlength="100" required><button
                                 type="button" class="eye" id="password-toggle" aria-label="Mostrar contraseña"><svg
                                     class="i eye-open" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
@@ -331,24 +331,9 @@ c0 85 -56 176 -123 201 -41 16 -127 13 -162 -5z" />
                     </div>
                     <button type="submit" class="btn primary lgbtn w-100" id="login-submit"><span
                             class="lbl">Entrar</span><i class="spin" aria-hidden="true"></i></button>
+                    <button type="button" class="btn primary lgbtn w-100" id="demo-login" hidden>Entrar a la demostración</button>
+                    <p class="demo-disclaimer" id="demo-disclaimer" hidden>Modo portafolio: usa registros ficticios guardados solo en este navegador. No contiene datos de FARMACIA TEC.</p>
 
-                    <details class="demo-accounts-panel">
-                        <summary>
-                            <span class="demo-summary-label"><span class="demo-account-icon" aria-hidden="true">▣</span> Cuentas de demostración</span>
-                            <span class="demo-summary-action">Mostrar <span aria-hidden="true">＋</span></span>
-                        </summary>
-                        <div class="demo-accounts-grid">
-                            <button type="button" class="demo-quick-fill" data-u="admin" data-p="admin">
-                                <span class="demo-admin-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5.2c0 4.5-2.9 7.6-7 9.8-4.1-2.2-7-5.3-7-9.8V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>Superadministrador</span><code>admin</code>
-                            </button>
-                            <button type="button" class="demo-quick-fill" data-u="farmacia_sj" data-p="cliente123">
-                                <span>Farmacia San José</span><code>farmacia_sj</code>
-                            </button>
-                            <button type="button" class="demo-quick-fill" data-u="ferre_roble" data-p="cliente123">
-                                <span>Ferretería El Roble</span><code>ferre_roble</code>
-                            </button>
-                        </div>
-                    </details>
                 </form>
             </section>
         </main>

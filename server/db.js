@@ -1,10 +1,16 @@
 import { DatabaseSync } from 'node:sqlite';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hashPassword } from './passwords.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_PATH = path.resolve(__dirname, 'geds.sqlite');
+const PRIVATE_DATA_PATH = path.resolve(__dirname, 'private', 'pharmacy-data.json');
+const SINGLE_STORE_VERSION = 1;
+
+loadLocalEnvironment();
 
 let dbInstance = null;
 
@@ -12,19 +18,32 @@ export function getDatabase() {
   if (dbInstance) return dbInstance;
 
   dbInstance = new DatabaseSync(DB_PATH);
-  
-  // Habilitar claves foraneas y optimizaciones
-  dbInstance.exec('PRAGMA foreign_keys = ON;');
-  dbInstance.exec('PRAGMA journal_mode = WAL;');
-
-  initSchema(dbInstance);
-  seedInitialData(dbInstance);
+  try {
+    dbInstance.exec('PRAGMA foreign_keys = ON;');
+    dbInstance.exec('PRAGMA journal_mode = WAL;');
+    dbInstance.exec('PRAGMA secure_delete = ON;');
+    initSchema(dbInstance);
+    seedInitialData(dbInstance);
+  } catch (error) {
+    dbInstance.close();
+    dbInstance = null;
+    throw error;
+  }
 
   return dbInstance;
 }
 
+function loadLocalEnvironment() {
+  const envPath = path.resolve(__dirname, '..', '.env');
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+    if (!match || match[1].startsWith('#') || process.env[match[1]]) continue;
+    process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, '$2');
+  }
+}
+
 function initSchema(db) {
-  // Asegurar migración de columnas si la tabla ya existía
   try {
     const prodCols = db.prepare('PRAGMA table_info(productos)').all();
     if (!prodCols.some(c => c.name === 'usuario_id')) {
@@ -106,11 +125,6 @@ function initSchema(db) {
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
 
-    -- =========================================================================
-    -- TRIGGERS DE SEGURIDAD E INTEGRIDAD DE DATOS (PROTECCIÓN A NIVEL DE BD)
-    -- =========================================================================
-
-    -- 1. Trigger de validación de precios y costos en productos (BEFORE INSERT / UPDATE)
     CREATE TRIGGER IF NOT EXISTS trg_valida_producto_precio_insert
     BEFORE INSERT ON productos
     BEGIN
@@ -133,7 +147,6 @@ function initSchema(db) {
       END;
     END;
 
-    -- 2. Trigger de validación de cantidad positiva en movimientos (BEFORE INSERT)
     CREATE TRIGGER IF NOT EXISTS trg_valida_movimiento_insert
     BEFORE INSERT ON movimientos
     BEGIN
@@ -145,7 +158,6 @@ function initSchema(db) {
       END;
     END;
 
-    -- 3. Trigger para actualización automática del stock de producto tras registrar movimiento (AFTER INSERT)
     CREATE TRIGGER IF NOT EXISTS trg_actualiza_stock_movimiento
     AFTER INSERT ON movimientos
     BEGIN
@@ -161,97 +173,89 @@ function initSchema(db) {
 }
 
 function seedInitialData(db) {
-  const insertUser = db.prepare(`
-    INSERT OR IGNORE INTO usuarios (id, username, password_hash, nombre, rol, activo)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-
-  // 1. Super Administrador General
-  insertUser.run(1, 'admin', 'admin', 'Administrador General', 'ADMIN', 1);
-
-  // 2. Cliente 1: Farmacia San José
-  insertUser.run(2, 'farmacia_sj', 'cliente123', 'Farmacia San José', 'ADMIN', 1);
-
-  // 3. Cliente 2: Ferretería El Roble
-  insertUser.run(3, 'ferre_roble', 'cliente123', 'Ferretería El Roble', 'ADMIN', 1);
-
-  // Categorias base
-  const insertCat = db.prepare('INSERT OR IGNORE INTO categorias (nombre) VALUES (?)');
-  ['Papelería', 'Limpieza', 'Herramientas', 'Alimentos', 'Electrónica', 'Medicamentos', 'Ferretería'].forEach(cat => insertCat.run(cat));
-
-  // Unidades base
-  const insertUnit = db.prepare('INSERT OR IGNORE INTO unidades_medida (nombre) VALUES (?)');
-  ['Pieza', 'Caja', 'Paquete', 'Kilogramo', 'Gramo', 'Litro', 'Metro'].forEach(u => insertUnit.run(u));
-
-  // Proveedores
-  const provCount = db.prepare('SELECT COUNT(*) as count FROM proveedores').get().count;
-  if (provCount === 0) {
-    const insertProv = db.prepare('INSERT INTO proveedores (nombre, telefono, correo) VALUES (?, ?, ?)');
-    insertProv.run('Distribuidora del Centro', '449 123 4567', 'ventas@dcentro.mx');
-    insertProv.run('Insumos Bajío', '449 765 4321', 'contacto@insumosbajio.mx');
-    insertProv.run('Ferretera Aguascalientes', '449 555 0182', 'pedidos@ferreags.mx');
+  const version = Number(db.prepare('PRAGMA user_version').get().user_version || 0);
+  if (version >= SINGLE_STORE_VERSION) {
+    delete process.env.FARMA_INITIAL_PASSWORD;
+    return;
   }
 
-  // Clientes
-  const clientCount = db.prepare('SELECT COUNT(*) as count FROM clientes').get().count;
-  if (clientCount === 0) {
+  const username = String(process.env.FARMA_USERNAME || '').trim();
+  const pharmacyName = String(process.env.FARMA_NAME || '').trim();
+  const initialPassword = process.env.FARMA_INITIAL_PASSWORD;
+  if (!username || !pharmacyName || !initialPassword) {
+    throw new Error('Configura FARMA_USERNAME, FARMA_NAME y FARMA_INITIAL_PASSWORD antes de inicializar la base local. Usa .env.example como guía.');
+  }
+  if (!existsSync(PRIVATE_DATA_PATH)) {
+    throw new Error('Falta el catálogo privado server/private/pharmacy-data.json.');
+  }
+  const data = JSON.parse(readFileSync(PRIVATE_DATA_PATH, 'utf8'));
+
+  let transactionOpen = false;
+  try {
+    db.exec('BEGIN IMMEDIATE');
+    transactionOpen = true;
+    db.exec(`
+      DELETE FROM movimientos;
+      DELETE FROM productos;
+      DELETE FROM clientes;
+      DELETE FROM proveedores;
+      DELETE FROM categorias;
+      DELETE FROM unidades_medida;
+      DELETE FROM usuarios;
+      DELETE FROM sqlite_sequence WHERE name IN ('usuarios', 'productos', 'movimientos', 'categorias', 'unidades_medida', 'clientes', 'proveedores');
+    `);
+
+    db.prepare(`
+      INSERT INTO usuarios (id, username, password_hash, nombre, rol, activo)
+      VALUES (1, ?, ?, ?, 'ADMIN', 1)
+    `).run(username, hashPassword(initialPassword), pharmacyName);
+
+    const insertCategory = db.prepare('INSERT INTO categorias (nombre) VALUES (?)');
+    for (const category of data.categories) insertCategory.run(category);
+
+    const insertUnit = db.prepare('INSERT INTO unidades_medida (nombre) VALUES (?)');
+    for (const unit of data.units) insertUnit.run(unit);
+
+    const insertProvider = db.prepare('INSERT INTO proveedores (nombre, telefono, correo) VALUES (?, ?, ?)');
+    for (const provider of data.providers) insertProvider.run(provider.nombre, provider.telefono || '', provider.correo || '');
+
     const insertClient = db.prepare('INSERT INTO clientes (nombre, telefono, correo) VALUES (?, ?, ?)');
-    insertClient.run('Mostrador general', '—', '—');
-    insertClient.run('Comercial Rivera', '449 222 3344', 'compras@rivera.mx');
-  }
+    for (const client of data.clients) insertClient.run(client.nombre, client.telefono || '', client.correo || '');
 
-  // Verificar si ya existen productos para los clientes prueba
-  const prodUser2 = db.prepare('SELECT COUNT(*) as count FROM productos WHERE usuario_id = 2').get().count;
-  if (prodUser2 === 0) {
-    const insertProd = db.prepare(`
+    const insertProduct = db.prepare(`
       INSERT INTO productos (usuario_id, codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (1, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1)
     `);
-
-    // Productos para Farmacia San José (usuario_id: 2)
-    const p1 = insertProd.run(2, 'MED-001', 'Paracetamol 500mg', 'Caja con 20 tabletas', 'Medicamentos', 'Caja', 18.5, 35.0, 150, 40, 1);
-    const p2 = insertProd.run(2, 'MED-002', 'Amoxicilina 500mg', 'Caja con 12 cápsulas', 'Medicamentos', 'Caja', 45.0, 85.0, 65, 20, 1);
-    const p3 = insertProd.run(2, 'MED-003', 'Alcohol Etílico 70% 500ml', 'Antiséptico en botella', 'Limpieza', 'Pieza', 22.0, 42.0, 12, 25, 1); // Stock bajo
-    const p4 = insertProd.run(2, 'MED-004', 'Cubrebocas Tricapa', 'Caja con 50 piezas', 'Limpieza', 'Caja', 35.0, 65.0, 80, 30, 1);
-    const p5 = insertProd.run(2, 'MED-005', 'Ibuprofeno 400mg', 'Caja con 10 cápsulas', 'Medicamentos', 'Caja', 28.0, 52.0, 95, 30, 1);
-
-    // Movimientos para Farmacia San José
-    const insertMov = db.prepare(`
+    const insertMovement = db.prepare(`
       INSERT INTO movimientos (usuario_id, fecha, pid, tipo, cant, motivo, obs)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (1, ?, ?, ?, ?, ?, ?)
     `);
-    insertMov.run(2, '2026-11-20', Number(p1.lastInsertRowid), 'E', 200, 'Recepción de pedido', 'Lote FAR-2026-A');
-    insertMov.run(2, '2026-11-21', Number(p1.lastInsertRowid), 'S', 50, 'Venta a mostrador', 'Ticket #1021');
-    insertMov.run(2, '2026-11-21', Number(p2.lastInsertRowid), 'E', 80, 'Recepción de pedido', 'Distribuidora Médica');
-    insertMov.run(2, '2026-11-22', Number(p2.lastInsertRowid), 'S', 15, 'Venta a mostrador', 'Ticket #1045');
-    insertMov.run(2, '2026-11-22', Number(p3.lastInsertRowid), 'E', 30, 'Compra local', 'Reposición');
-    insertMov.run(2, '2026-11-23', Number(p3.lastInsertRowid), 'S', 18, 'Venta corporativa', 'Clínica dental');
+    const dateAtOffset = days => {
+      const date = new Date();
+      date.setDate(date.getDate() - days);
+      return date.toISOString().slice(0, 10);
+    };
+
+    data.products.forEach((product, index) => {
+      const result = insertProduct.run(
+        product.codigo, product.nombre, product.desc, product.categoria, product.unidad,
+        product.costo, product.precio, product.min
+      );
+      const productId = Number(result.lastInsertRowid);
+      const stock = Number(product.stock);
+      const exitQuantity = Math.max(1, Math.floor(stock * 0.08));
+      insertMovement.run(dateAtOffset(45 + (index % 20)), productId, 'E', stock + exitQuantity, 'Inventario inicial', 'Carga inicial de existencias');
+      insertMovement.run(dateAtOffset(2 + (index % 12)), productId, 'S', exitQuantity, 'Venta mostrador', 'Movimiento de demostración');
+    });
+
+    db.exec(`PRAGMA user_version = ${SINGLE_STORE_VERSION}`);
+    db.exec('COMMIT');
+    transactionOpen = false;
+    delete process.env.FARMA_INITIAL_PASSWORD;
+  } catch (error) {
+    if (transactionOpen) db.exec('ROLLBACK');
+    throw error;
   }
-
-  const prodUser3 = db.prepare('SELECT COUNT(*) as count FROM productos WHERE usuario_id = 3').get().count;
-  if (prodUser3 === 0) {
-    const insertProd = db.prepare(`
-      INSERT INTO productos (usuario_id, codigo, nombre, desc, categoria, unidad, costo, precio, stock, min, activo)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    // Productos para Ferretería El Roble (usuario_id: 3)
-    const f1 = insertProd.run(3, 'FER-010', 'Taladro Percutor 650W', 'Mandril de 1/2 pulgada', 'Herramientas', 'Pieza', 650.0, 999.0, 14, 5, 1);
-    const f2 = insertProd.run(3, 'FER-011', 'Juego de Destornilladores', 'Kit de 6 piezas cromo vanadio', 'Herramientas', 'Pieza', 110.0, 189.0, 4, 10, 1); // Stock bajo
-    const f3 = insertProd.run(3, 'FER-012', 'Tornillo para Madera 2"', 'Caja de 100 piezas', 'Ferretería', 'Caja', 40.0, 75.0, 220, 50, 1);
-    const f4 = insertProd.run(3, 'FER-013', 'Disco de Corte Metal 4-1/2"', 'Extra fino 1mm', 'Herramientas', 'Pieza', 15.0, 32.0, 350, 80, 1);
-    const f5 = insertProd.run(3, 'FER-014', 'Pintura Blanca Vinílica 19L', 'Cubeta acabado mate', 'Limpieza', 'Pieza', 780.0, 1250.0, 18, 8, 1);
-
-    const insertMov = db.prepare(`
-      INSERT INTO movimientos (usuario_id, fecha, pid, tipo, cant, motivo, obs)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    insertMov.run(3, '2026-11-18', Number(f1.lastInsertRowid), 'E', 20, 'Compra a mayorista', 'Factura FER-882');
-    insertMov.run(3, '2026-11-19', Number(f1.lastInsertRowid), 'S', 6, 'Venta a contratista', 'Obra Las Américas');
-    insertMov.run(3, '2026-11-20', Number(f3.lastInsertRowid), 'E', 300, 'Recepción directa', 'Insumos Industriales');
-    insertMov.run(3, '2026-11-21', Number(f3.lastInsertRowid), 'S', 80, 'Venta por mayoreo', 'Carpintería Moderna');
-    insertMov.run(3, '2026-11-22', Number(f4.lastInsertRowid), 'E', 400, 'Pedido quincenal', 'Aceros del Bajío');
-    insertMov.run(3, '2026-11-23', Number(f4.lastInsertRowid), 'S', 50, 'Venta al público', 'Mostrador');
-  }
+  db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+  db.exec('VACUUM');
 }
-

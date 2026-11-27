@@ -2,8 +2,10 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AuthController, ProductController, MovementController, CatalogController, UserController } from './controllers.js';
+import { AuthController, ProductController, MovementController, CatalogController } from './controllers.js';
+import { UserModel } from './models.js';
 import { ValidationError } from './validators.js';
+import { readSessionCookie, resolveSession } from './sessions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,55 +44,59 @@ function parseBody(req) {
   });
 }
 
-function sendJson(res, statusCode, data) {
+function sendJson(res, statusCode, data, extraHeaders = {}) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Referrer-Policy': 'strict-origin-when-cross-origin'
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    ...extraHeaders
   });
   res.end(JSON.stringify(data));
 }
 
-// Middleware de verificación de seguridad para endpoints privados
 function checkAuth(req, res, pathname) {
-  // Rutas públicas que no requieren token
+  // Login y logout son públicos.
   const publicPaths = ['/api/auth/login', '/api/auth/logout'];
   if (publicPaths.includes(pathname)) return true;
 
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    sendJson(res, 401, { message: 'Acceso no autorizado: Token Bearer faltante o inválido' });
-    return false;
-  }
-
-  const token = authHeader.slice(7).trim();
-  if (!token || token.length < 5) {
+  const token = readSessionCookie(req);
+  const session = token ? resolveSession(token) : null;
+  if (!session) {
     sendJson(res, 401, { message: 'Token de sesión inválido o expirado' });
     return false;
   }
-
-  // Extraer ID de usuario si el token tiene formato: token-jwt-<id>-<timestamp>
-  const tokenMatch = token.match(/^token-jwt-(\d+)-/);
-  if (tokenMatch) {
-    req.user = { id: Number(tokenMatch[1]) };
-  } else {
-    req.user = { id: 1 };
+  const user = UserModel.findById(session.userId);
+  if (!user || Number(user.activo) !== 1) {
+    sendJson(res, 401, { message: 'La sesión ya no está activa' });
+    return false;
   }
-
+  req.user = user;
   return true;
 }
 
 function serveStatic(req, res, pathname) {
-  const relativePath = pathname === '/' ? '/index.html' : pathname;
-  const filePath = path.normalize(path.join(ROOT_DIR, relativePath));
-  if (!filePath.startsWith(ROOT_DIR)) {
-    res.writeHead(403);
-    res.end('Acceso denegado');
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch {
+    res.writeHead(400);
+    res.end('Solicitud inválida');
+    return;
+  }
+
+  const relativePath = decodedPath === '/' ? '/index.html' : decodedPath;
+  const filePath = path.resolve(ROOT_DIR, `.${relativePath}`);
+  const relativeToRoot = path.relative(ROOT_DIR, filePath);
+  const pathParts = relativeToRoot.split(path.sep);
+  const restrictedRoots = new Set(['server', '.git', 'node_modules', 'test']);
+  const privateFile = pathParts.some(part => part.startsWith('.'))
+    || pathParts.some(part => restrictedRoots.has(part.toLowerCase()))
+    || relativeToRoot.toLowerCase() === path.join('js', 'data', 'publicdemostore.js').toLowerCase();
+  if (!relativeToRoot || relativeToRoot.startsWith(`..${path.sep}`) || path.isAbsolute(relativeToRoot) || privateFile) {
+    res.writeHead(404);
+    res.end('Archivo no encontrado');
     return;
   }
 
@@ -106,7 +112,10 @@ function serveStatic(req, res, pathname) {
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin'
     });
 
     const stream = fs.createReadStream(filePath);
@@ -119,16 +128,12 @@ async function handleApi(req, res, parsedUrl) {
   const method = req.method;
 
   if (method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    });
+    res.writeHead(204);
     res.end();
     return;
   }
 
-  // Rutas de Autenticación
+  // Autenticación
   if (pathname === '/api/auth/login' && method === 'POST') {
     const body = await parseBody(req);
     return await AuthController.login(req, res, body, sendJson);
@@ -138,12 +143,12 @@ async function handleApi(req, res, parsedUrl) {
     return await AuthController.logout(req, res, sendJson);
   }
 
-  // Verificar autenticación mediante Token Bearer en todas las operaciones privadas
+  // Validar cookie de sesión.
   if (!checkAuth(req, res, pathname)) {
     return;
   }
 
-  // Rutas de Productos
+  // Productos
   if (pathname === '/api/productos') {
     if (method === 'GET') {
       return await ProductController.getAll(req, res, searchParams, sendJson);
@@ -173,7 +178,7 @@ async function handleApi(req, res, parsedUrl) {
     }
   }
 
-  // Rutas de Movimientos
+  // Movimientos
   if (pathname === '/api/movimientos') {
     if (method === 'GET') {
       return await MovementController.getAll(req, res, searchParams, sendJson);
@@ -184,7 +189,7 @@ async function handleApi(req, res, parsedUrl) {
     }
   }
 
-  // Rutas de Catálogos
+  // Catálogos
   const catMatch = pathname.match(/^\/api\/catalogos\/([a-zA-Z0-9_\-]+)(\/([a-zA-Z0-9_\-]+))?$/);
   if (catMatch) {
     const catalogName = catMatch[1];
@@ -202,29 +207,6 @@ async function handleApi(req, res, parsedUrl) {
     if (method === 'DELETE' && itemIndex !== null) {
       return await CatalogController.removeItem(req, res, catalogName, itemIndex, sendJson);
     }
-  }
-
-  // Rutas de Usuarios / Clientes Administradores
-  if (pathname === '/api/usuarios') {
-    if (method === 'GET') {
-      return await UserController.getAll(req, res, sendJson);
-    }
-    if (method === 'POST') {
-      const body = await parseBody(req);
-      return await UserController.create(req, res, body, sendJson);
-    }
-  }
-
-  const userToggleMatch = pathname.match(/^\/api\/usuarios\/(\d+)\/toggle$/);
-  if (userToggleMatch && (method === 'PUT' || method === 'POST')) {
-    const id = userToggleMatch[1];
-    return await UserController.toggleStatus(req, res, id, sendJson);
-  }
-
-  const userMatch = pathname.match(/^\/api\/usuarios\/(\d+)$/);
-  if (userMatch && method === 'DELETE') {
-    const id = userMatch[1];
-    return await UserController.delete(req, res, id, sendJson);
   }
 
   return sendJson(res, 404, { message: 'Ruta API no encontrada' });

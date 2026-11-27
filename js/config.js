@@ -1,5 +1,8 @@
 
 
+const hostname = typeof window === 'undefined' ? '' : window.location.hostname.toLowerCase();
+const isGitHubPages = hostname === 'github.io' || hostname.endsWith('.github.io');
+
 export const CONFIG = {
   APP: {
     name: 'GEDS',
@@ -9,12 +12,9 @@ export const CONFIG = {
     date: '10/11/2026',
     legend: 'GEDS · Sistema Web de Gestión y Control de Inventario · Instituto Tecnológico de Aguascalientes'
   },
-  // Si se corre en servidor local (localhost o 127.0.0.1) se conecta a la API y BD SQLite real.
-  // En GitHub Pages o cualquier hosting estático activa el modo demostración local seguro para que jamás dé errores.
-  USE_MOCK: typeof window !== 'undefined' && 
-    window.location.hostname !== 'localhost' && 
-    window.location.hostname !== '127.0.0.1',
-  API_BASE_URL: 'http://localhost:3000/api',
+  // Demo en Pages; SQLite en localhost.
+  PUBLIC_DEMO: isGitHubPages,
+  API_BASE_URL: '/api',
   ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',
@@ -41,16 +41,7 @@ export const CONFIG = {
   },
   STORAGE_KEYS: {
     THEME: 'geds_theme',
-    SESSION: 'geds_session',
-    TOKEN: 'geds_token',
-    PRODUCTS: 'geds_products',
-    MOVEMENTS: 'geds_movements',
-    CATEGORIES: 'geds_categories',
-    UNITS: 'geds_units',
-    PROVIDERS: 'geds_providers',
-    CLIENTS: 'geds_clients',
-    USERS: 'geds_users',
-    INITIALIZED: 'geds_initialized_v3'
+    SESSION: 'geds_session'
   }
 };
 

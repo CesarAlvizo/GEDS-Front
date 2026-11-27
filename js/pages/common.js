@@ -5,7 +5,7 @@ import { toast, toastCard } from '../components/toast.js';
 
 if (!authService.isAuthenticated()) location.replace('login.html');
 setTheme(getTheme());
-document.querySelectorAll('[data-theme-toggle]').forEach(button => button.addEventListener('click', () => setTheme(getTheme() === 'dark' ? 'light' : 'dark')));
+document.querySelectorAll('[data-theme-toggle]').forEach(button => button.addEventListener('click', event => setTheme(getTheme() === 'dark' ? 'light' : 'dark', event.currentTarget)));
 document.querySelectorAll('[data-logout]').forEach(button => button.addEventListener('click', () => confirmBox('Cerrar sesión', '¿Deseas salir del sistema?', 'Cerrar sesión', () => { sessionStorage.setItem('geds_logout_message', 'La sesión se cerró correctamente. El acceso al sistema quedó protegido.'); authService.logout(); location.assign('login.html'); })));
 document.addEventListener('click', event => {
   document.querySelectorAll('.user-menu[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; });

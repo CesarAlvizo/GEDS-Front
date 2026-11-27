@@ -2,18 +2,13 @@ import { authService } from '../services/authService.js';
 import { setTheme, getTheme } from '../components/shell.js';
 import { toastCard } from '../components/toast.js';
 import { InputSecurity } from '../utils/validators.js';
+import { CONFIG } from '../config.js';
 
 setTheme(getTheme());
-document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => setTheme(getTheme() === 'dark' ? 'light' : 'dark'));
+document.querySelector('[data-theme-toggle]')?.addEventListener('click', event => setTheme(getTheme() === 'dark' ? 'light' : 'dark', event.currentTarget));
 
 const currentUser = authService.getCurrentUser();
-if (currentUser) {
-  if (currentUser.rol === 'SUPERADMIN' || currentUser.id === 1) {
-    location.replace('admin-tenants.html');
-  } else {
-    location.replace('dashboard.html');
-  }
-}
+if (currentUser) location.replace('dashboard.html');
 
 const logoutMessage = sessionStorage.getItem('geds_logout_message');
 if (logoutMessage) { sessionStorage.removeItem('geds_logout_message'); toastCard(logoutMessage); }
@@ -23,16 +18,25 @@ const button = document.querySelector('#login-submit');
 const usernameInput = document.querySelector('#username');
 const password = document.querySelector('#password');
 const passwordToggle = document.querySelector('#password-toggle');
+const demoLogin = document.querySelector('#demo-login');
 
-// Autollenado rápido de credenciales demo
-document.querySelectorAll('.demo-quick-fill').forEach(btn => {
-  btn.addEventListener('click', () => {
-    usernameInput.value = btn.dataset.u || '';
-    password.value = btn.dataset.p || '';
-    error.hidden = true;
-    usernameInput.focus();
+if (CONFIG.PUBLIC_DEMO) {
+  document.querySelector('.sub').textContent = 'Explora GEDS con información ficticia. Tus cambios de demostración se guardan solo en este navegador.';
+  form.querySelectorAll('.field, #login-submit').forEach(element => { element.hidden = true; element.style.display = 'none'; });
+  passwordToggle.hidden = true;
+  passwordToggle.style.display = 'none';
+  demoLogin.hidden = false;
+  demoLogin.style.display = 'inline-flex';
+  document.querySelector('#demo-disclaimer').hidden = false;
+  document.querySelector('.lp-chip').replaceChildren(Object.assign(document.createElement('span'), { textContent: 'Demostración pública · datos ficticios' }));
+  document.querySelectorAll('.lp-feat-text span').forEach(element => {
+    if (element.textContent.includes('Toma decisiones con datos')) element.textContent = 'Explora reportes con movimientos de ejemplo.';
   });
-});
+  demoLogin.addEventListener('click', () => {
+    authService.loginDemo();
+    location.assign('dashboard.html');
+  });
+}
 
 passwordToggle.addEventListener('click', () => {
   const showPassword = password.type === 'password';
@@ -56,12 +60,8 @@ form.addEventListener('submit', async event => {
   }
 
   try {
-    const user = await authService.login(usernameVal.value, cleanPassword);
-    if (user.rol === 'SUPERADMIN' || user.id === 1) {
-      location.assign('admin-tenants.html');
-    } else {
-      location.assign('dashboard.html');
-    }
+    await authService.login(usernameVal.value, cleanPassword);
+    location.assign('dashboard.html');
   } catch (err) {
     error.textContent = err.message || 'Usuario o contraseña incorrectos.';
     error.hidden = false;

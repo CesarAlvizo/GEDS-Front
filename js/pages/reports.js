@@ -1,7 +1,6 @@
 import { catalogService } from '../services/catalogService.js';
 import { productService } from '../services/productService.js';
 import { reportService } from '../services/reportService.js';
-import { storageAdapter } from '../data/localStorageAdapter.js';
 import { notify, addOption, makeCell, showEmptyState } from './common.js';
 import { InputSecurity } from '../utils/validators.js';
 
@@ -32,7 +31,7 @@ async function update() {
   if (!movements.length) { showEmptyState(host, 'Sin movimientos para mostrar', 'No hay movimientos para los filtros seleccionados.', '↔'); return; }
   const table = document.createElement('table'); const head = table.createTHead().insertRow();['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Motivo', 'Observaciones'].forEach(text => { const th = document.createElement('th'); th.textContent = text; head.append(th); });
   const body = table.createTBody(); movements.forEach((movement, index) => {
-    const item = productLookup.get(Number(movement.pid)) || storageAdapter.getProductById(movement.pid);
+    const item = productLookup.get(Number(movement.pid));
     const row = body.insertRow(); row.style.setProperty('--i', index);
     makeCell(row, movement.fecha);
     makeCell(row, item?.nombre || 'Producto eliminado');
@@ -44,8 +43,12 @@ async function update() {
   host.append(table);
 }
 [from, to, category, product, type].forEach(input => input.addEventListener('change', update));
-document.querySelector('#report-export').addEventListener('click', async () => {
-  const exported = await reportService.exportReport(filters(), 'reporte-geds.csv');
+document.querySelector('#report-export-csv').addEventListener('click', async () => {
+  const exported = await reportService.exportReport(filters());
   notify(exported ? 'Reporte exportado' : 'No hay datos para exportar', exported ? 'ok' : 'warn');
+});
+document.querySelector('#report-export-xlsx').addEventListener('click', async () => {
+  const exported = await reportService.exportExcelReport(filters());
+  notify(exported ? 'Reporte Excel descargado' : 'No hay datos para exportar', exported ? 'ok' : 'warn');
 });
 await update();

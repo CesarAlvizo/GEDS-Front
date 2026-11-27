@@ -90,8 +90,17 @@
           </div>
         </section>
         <section class="grid g2 mt-3">
-          <div class="card">
-            <h2>Movimientos de los últimos 7 días</h2>
+          <div class="card dashboard-chart-card">
+            <div class="dashboard-chart-heading">
+              <div>
+                <h2>Movimientos registrados</h2>
+                <p>Número de registros por día · últimos 7 días</p>
+              </div>
+              <div class="dashboard-chart-legend" aria-label="Leyenda de movimientos">
+                <span><i class="chart-key entry" aria-hidden="true"></i>Entradas</span>
+                <span><i class="chart-key exit" aria-hidden="true"></i>Salidas</span>
+              </div>
+            </div>
             <div class="bars" id="movement-chart">
             </div>
           </div>
@@ -100,7 +109,7 @@
               <h2>Alertas de stock mínimo</h2>
               <span class="sp">
               </span>
-              <a class="btn sm" href="productos.html?low=1">Ver todos</a>
+              <a class="btn sm" id="low-stock-all" href="productos.html?low=1">Ver todas</a>
             </div>
             <div class="list" id="low-stock-list">
             </div>
