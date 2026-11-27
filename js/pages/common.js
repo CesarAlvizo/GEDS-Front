@@ -48,3 +48,19 @@ export function showEmptyState(host, title, message, icon = '⌕') {
   const detail = document.createElement('p'); detail.textContent = message;
   state.append(symbol, heading, detail); host.replaceChildren(state);
 }
+
+function initAbcChatbot() {
+  if (document.querySelector('script[src*="widget.js"]') || document.querySelector('abc-chat-widget')) return;
+  const script = document.createElement('script');
+  script.src = 'https://abc-chatbot-two.vercel.app/widget.js';
+  script.setAttribute('data-client-id', 'geds-inventario-ita');
+  script.setAttribute('data-public-key', 'pub-geds-ita-2026');
+  script.defer = true;
+  (document.body || document.head).appendChild(script);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAbcChatbot);
+} else {
+  initAbcChatbot();
+}
