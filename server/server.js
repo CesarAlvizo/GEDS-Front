@@ -11,6 +11,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || 'localhost';
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
+const MAX_LOGIN_CLIENTS = 5000;
+const loginAttempts = new Map();
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -51,9 +56,56 @@ function sendJson(res, statusCode, data, extraHeaders = {}) {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Cross-Origin-Resource-Policy': 'same-origin',
     ...extraHeaders
   });
   res.end(JSON.stringify(data));
+}
+
+function clientAddress(req) {
+  return String(req.socket?.remoteAddress || 'unknown').replace(/^::ffff:/, '');
+}
+
+function isLoginRateLimited(req, res) {
+  const now = Date.now();
+  for (const [address, entry] of loginAttempts) {
+    if (entry.resetAt <= now) loginAttempts.delete(address);
+  }
+
+  const address = clientAddress(req);
+  let entry = loginAttempts.get(address);
+  if (!entry) {
+    if (loginAttempts.size >= MAX_LOGIN_CLIENTS) {
+      loginAttempts.delete(loginAttempts.keys().next().value);
+    }
+    entry = { count: 0, resetAt: now + LOGIN_WINDOW_MS };
+    loginAttempts.set(address, entry);
+  }
+
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+    const retryAfter = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+    sendJson(res, 429, { message: 'Demasiados intentos. Intenta de nuevo más tarde.' }, {
+      'Retry-After': String(retryAfter)
+    });
+    return true;
+  }
+
+  entry.count += 1;
+  return false;
+}
+
+function hasAllowedOrigin(req) {
+  const originHeader = req.headers.origin;
+  if (!originHeader) return true;
+
+  try {
+    const origin = new URL(originHeader);
+    const protocol = req.socket?.encrypted ? 'https:' : 'http:';
+    return origin.protocol === protocol && origin.host.toLowerCase() === String(req.headers.host || '').toLowerCase();
+  } catch {
+    return false;
+  }
 }
 
 function checkAuth(req, res, pathname) {
@@ -115,7 +167,9 @@ function serveStatic(req, res, pathname) {
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
-      'Referrer-Policy': 'strict-origin-when-cross-origin'
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Cross-Origin-Resource-Policy': 'same-origin'
     });
 
     const stream = fs.createReadStream(filePath);
@@ -133,8 +187,18 @@ async function handleApi(req, res, parsedUrl) {
     return;
   }
 
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && !hasAllowedOrigin(req)) {
+    sendJson(res, 403, { message: 'Origen de solicitud no permitido' });
+    return;
+  }
+
   // Autenticación
   if (pathname === '/api/auth/login' && method === 'POST') {
+    if (isLoginRateLimited(req, res)) return;
+    const address = clientAddress(req);
+    res.once('finish', () => {
+      if (res.statusCode === 200) loginAttempts.delete(address);
+    });
     const body = await parseBody(req);
     return await AuthController.login(req, res, body, sendJson);
   }
@@ -224,7 +288,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, err.statusCode || 400, { message: err.message, errors: err.errors });
       } else {
         console.error('Error no controlado en la API:', err);
-        sendJson(res, 500, { message: 'Error interno del servidor', error: err.message });
+        sendJson(res, 500, { message: 'Error interno del servidor' });
       }
     }
   } else {
@@ -232,11 +296,11 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`====================================================`);
   console.log(` GEDS · Sistema Web de Gestión y Control de Inventario`);
-  console.log(` Servidor local activo en: http://localhost:${PORT}`);
-  console.log(` API REST disponible en:  http://localhost:${PORT}/api`);
+  console.log(` Servidor local activo en: http://${HOST}:${PORT}`);
+  console.log(` API REST disponible en:  http://${HOST}:${PORT}/api`);
   console.log(` Base de datos SQLite protegida con consultas preparadas activa`);
   console.log(`====================================================`);
 });

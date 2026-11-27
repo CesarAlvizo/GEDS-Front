@@ -32,6 +32,8 @@ npm start
 
 La aplicación queda disponible en `http://localhost:3000`. Inicia sesión desde esa dirección para que el navegador use la API del mismo servidor. SQLite crea o migra `server/geds.sqlite` en la primera petición autenticada. Este modo local no carga el módulo de datos de demostración.
 
+El servidor escucha en `localhost` por defecto para limitar el acceso a este equipo. Define `HOST` solo si necesitas exponerlo deliberadamente en una interfaz de red.
+
 Al publicar en el dominio predeterminado `*.github.io`, la aplicación activa automáticamente un modo de portafolio: permite explorar y modificar datos inventados, guardados solo en el almacenamiento de ese navegador. No usa ni solicita acceso a SQLite, credenciales o registros locales. El inicio de sesión de demostración no es autenticación real.
 
 ## Inicialización local
@@ -79,6 +81,8 @@ El servidor local sigue usando `server/geds.sqlite`; nunca lee ni modifica la ba
 ## Configuración de API
 
 La configuración de la API está en `js/config.js` y usa `/api` en el mismo origen. Las sesiones viajan en una cookie `HttpOnly`; no se almacenan tokens Bearer en `localStorage`. La especificación está en [API_SPECIFICATION.md](API_SPECIFICATION.md).
+
+La descripción de los controles y límites actuales está en [SECURITY.md](SECURITY.md).
 
 ## Créditos
 
